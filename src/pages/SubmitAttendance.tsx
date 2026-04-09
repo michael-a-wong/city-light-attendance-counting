@@ -122,6 +122,54 @@ const SubmitAttendance = () => {
     }));
   };
 
+  const formatLocationName = (location: string): string => {
+    switch (location) {
+      case 'mission-college-main':
+        return 'Mission College Main';
+      case 'mission-college-overflow':
+        return 'Mission College Overflow';
+      case 'silicon-valley-university':
+        return 'Silicon Valley University';
+      default:
+        return location;
+    }
+  };
+
+  const generateSummaryText = () => {
+    const date = new Date(formData.date + 'T00:00:00');
+    const formattedDate = date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    const totalAdults = calculateTotal();
+    const totalKids = calculateKidsTotal();
+    const totalCombined = totalAdults + totalKids;
+    const locationName = formatLocationName(formData.location);
+
+    let text = `Weekly Attendance Summary - ${formattedDate}\n`;
+    text += `${'='.repeat(60)}\n\n`;
+    text += `Location: ${locationName}\n\n`;
+    text += `Total Adults: ${totalAdults}\n`;
+    text += `Total Kids: ${totalKids}\n`;
+    text += `Total Combined: ${totalCombined}\n`;
+
+    return text;
+  };
+
+  const copyToClipboard = async () => {
+    const text = generateSummaryText();
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Summary copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -390,6 +438,15 @@ const SubmitAttendance = () => {
             <span className="total-value">{total + calculateKidsTotal()}</span>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={copyToClipboard}
+          className="copy-summary-button"
+          disabled={!formData.date || total === 0}
+        >
+          📋 Copy Summary
+        </button>
 
         <button type="submit" className="submit-button" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
