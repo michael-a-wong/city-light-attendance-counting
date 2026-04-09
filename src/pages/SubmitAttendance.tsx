@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { submitAttendanceRecord, getAuthToken } from '../services/googleSheets';
 import { submitMockAttendanceRecord } from '../services/mockData';

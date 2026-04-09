@@ -10,7 +10,7 @@ const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID;
 
 let gapiInited = false;
 let gisInited = false;
-let tokenClient: any;
+let tokenClient: google.accounts.oauth2.TokenClient | null = null;
 
 /**
  * Initialize Google API client
@@ -72,7 +72,7 @@ export const getAuthToken = (): Promise<string> => {
       return;
     }
 
-    tokenClient.callback = async (resp: any) => {
+    tokenClient.callback = async (resp: google.accounts.oauth2.TokenResponse) => {
       if (resp.error !== undefined) {
         reject(resp);
       } else {
@@ -112,7 +112,7 @@ export const fetchAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
     });
 
     const rows = response.result.values || [];
-    return rows.map((row: any[]): AttendanceRecord => {
+    return rows.map((row: string[]): AttendanceRecord => {
       const farLeft = parseInt(row[2]) || 0;
       const left = parseInt(row[3]) || 0;
       const middleLeft = parseInt(row[4]) || 0;
@@ -225,9 +225,9 @@ export const updateAttendanceRecord = async (
     });
 
     const rows = response.result.values || [];
-    
+
     // Find the row index (0-based in rows array, but add 2 for sheet row number because headers are row 1)
-    const rowIndex = rows.findIndex((row: any[]) => 
+    const rowIndex = rows.findIndex((row: string[]) => 
       row[1] === record.date && row[0] === record.name && row[2] === record.location
     );
 

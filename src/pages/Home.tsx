@@ -27,6 +27,18 @@ const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID;
 
 type LocationFilter = 'all' | 'mission-college-main' | 'mission-college-overflow' | 'silicon-valley-university';
 
+interface ChartDataPoint {
+  date: string;
+  'MC Main'?: number;
+  'MC Overflow'?: number;
+  'SVU'?: number;
+  'Total Adults'?: number;
+  'Total Kids'?: number;
+  'Combined Total'?: number;
+  'Adult Total'?: number;
+  'Kids'?: number;
+}
+
 const formatLocationName = (location: string): string => {
   switch (location) {
     case 'mission-college-main':
@@ -157,11 +169,11 @@ const Home = () => {
         acc[dateKey]['Total Kids'] += record.kids;
 
         return acc;
-      }, {} as Record<string, any>);
+      }, {} as Record<string, ChartDataPoint>);
 
       return Object.values(groupedByDate)
-        .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime())
-        .map((item: any) => ({
+        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .map((item) => ({
           date: new Date(item.date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
