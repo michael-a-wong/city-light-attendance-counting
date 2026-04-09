@@ -1,5 +1,26 @@
 import { AttendanceRecord } from '../types/attendance-types';
 
+// Helper function to calculate total from all sections
+const calculateTotal = (record: Partial<AttendanceRecord>): number => {
+  return (record.farLeft || 0) +
+         (record.left || 0) +
+         (record.middleLeft || 0) +
+         (record.middleRight || 0) +
+         (record.right || 0) +
+         (record.farRight || 0) +
+         (record.back || 0) +
+         (record.momsRoom || 0) +
+         (record.familyRoom || 0) +
+         (record.overflow1 || 0) +
+         (record.overflow2 || 0) +
+         (record.leftWingLeftColumn || 0) +
+         (record.leftWingRightColumn || 0) +
+         (record.rightWingLeftColumn || 0) +
+         (record.rightWingRightColumn || 0) +
+         (record.svuFamilyOverflow || 0) +
+         (record.adjustment || 0);
+};
+
 // Generate mock attendance data for the last 20 weeks
 const generateMockData = (): AttendanceRecord[] => {
   const records: AttendanceRecord[] = [];
@@ -35,10 +56,10 @@ const generateMockData = (): AttendanceRecord[] => {
     if (isTestWeek) {
       // Week 10: All 3 locations (test case)
       // Mission College Main
-      records.push({
+      const mcMainRecord = {
         name: counters[week % counters.length],
         date: dateStr,
-        location: 'mission-college-main',
+        location: 'mission-college-main' as const,
         farLeft: Math.round(28 * totalFactor),
         left: Math.round(32 * totalFactor),
         middleLeft: Math.round(35 * totalFactor),
@@ -58,15 +79,17 @@ const generateMockData = (): AttendanceRecord[] => {
         adjustment: Math.round(5 * totalFactor),
         kids: Math.round(40 * totalFactor),
         notes: '',
-        total: Math.round(215 * totalFactor),
+        total: 0,
         timestamp: `${dateStr}T10:00:00Z`,
-      });
+      };
+      mcMainRecord.total = calculateTotal(mcMainRecord);
+      records.push(mcMainRecord);
 
       // Mission College Overflow
-      records.push({
+      const mcOverflowRecord = {
         name: counters[(week + 1) % counters.length],
         date: dateStr,
-        location: 'mission-college-overflow',
+        location: 'mission-college-overflow' as const,
         farLeft: 0,
         left: 0,
         middleLeft: 0,
@@ -86,15 +109,17 @@ const generateMockData = (): AttendanceRecord[] => {
         adjustment: Math.round(3 * totalFactor),
         kids: Math.round(25 * totalFactor),
         notes: '',
-        total: Math.round(118 * totalFactor),
+        total: 0,
         timestamp: `${dateStr}T10:15:00Z`,
-      });
+      };
+      mcOverflowRecord.total = calculateTotal(mcOverflowRecord);
+      records.push(mcOverflowRecord);
 
       // SVU
-      records.push({
+      const svuRecord = {
         name: counters[(week + 2) % counters.length],
         date: dateStr,
-        location: 'silicon-valley-university',
+        location: 'silicon-valley-university' as const,
         farLeft: 0,
         left: 0,
         middleLeft: 0,
@@ -114,15 +139,17 @@ const generateMockData = (): AttendanceRecord[] => {
         adjustment: Math.round(3 * totalFactor),
         kids: Math.round(18 * totalFactor),
         notes: '',
-        total: Math.round(100 * totalFactor),
+        total: 0,
         timestamp: `${dateStr}T11:00:00Z`,
-      });
+      };
+      svuRecord.total = calculateTotal(svuRecord);
+      records.push(svuRecord);
     } else if (isSVUWeek) {
       // SVU only (no Mission College)
-      records.push({
+      const svuOnlyRecord = {
         name: counters[week % counters.length],
         date: dateStr,
-        location: 'silicon-valley-university',
+        location: 'silicon-valley-university' as const,
         farLeft: 0,
         left: 0,
         middleLeft: 0,
@@ -142,16 +169,18 @@ const generateMockData = (): AttendanceRecord[] => {
         adjustment: Math.round(7 * totalFactor),
         kids: Math.round(65 * totalFactor),
         notes: '',
-        total: Math.round(400 * totalFactor),
+        total: 0,
         timestamp: `${dateStr}T11:00:00Z`,
-      });
+      };
+      svuOnlyRecord.total = calculateTotal(svuOnlyRecord);
+      records.push(svuOnlyRecord);
     } else {
       // Mission College only (Main + Overflow)
       // Mission College Main
-      records.push({
+      const regularMcMainRecord = {
         name: counters[week % counters.length],
         date: dateStr,
-        location: 'mission-college-main',
+        location: 'mission-college-main' as const,
         farLeft: Math.round(28 * totalFactor),
         left: Math.round(32 * totalFactor),
         middleLeft: Math.round(35 * totalFactor),
@@ -171,15 +200,17 @@ const generateMockData = (): AttendanceRecord[] => {
         adjustment: Math.round(5 * totalFactor),
         kids: Math.round(40 * totalFactor),
         notes: '',
-        total: Math.round(215 * totalFactor),
+        total: 0,
         timestamp: `${dateStr}T10:00:00Z`,
-      });
+      };
+      regularMcMainRecord.total = calculateTotal(regularMcMainRecord);
+      records.push(regularMcMainRecord);
 
       // Mission College Overflow
-      records.push({
+      const regularMcOverflowRecord = {
         name: counters[(week + 1) % counters.length],
         date: dateStr,
-        location: 'mission-college-overflow',
+        location: 'mission-college-overflow' as const,
         farLeft: 0,
         left: 0,
         middleLeft: 0,
@@ -199,9 +230,11 @@ const generateMockData = (): AttendanceRecord[] => {
         adjustment: Math.round(4 * totalFactor),
         kids: Math.round(30 * totalFactor),
         notes: '',
-        total: Math.round(169 * totalFactor),
+        total: 0,
         timestamp: `${dateStr}T10:15:00Z`,
-      });
+      };
+      regularMcOverflowRecord.total = calculateTotal(regularMcOverflowRecord);
+      records.push(regularMcOverflowRecord);
     }
   }
 

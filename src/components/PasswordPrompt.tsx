@@ -1,8 +1,9 @@
 import { useState, FormEvent } from 'react';
+import { ATTENDANCE_PASSWORD } from '../config/auth';
 import './PasswordPrompt.css';
 
 interface PasswordPromptProps {
-  onSuccess: () => void;
+  onSuccess: (password: string) => void;
 }
 
 const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
@@ -12,8 +13,8 @@ const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    if (password === 'adminteam') {
-      onSuccess();
+    if (password === ATTENDANCE_PASSWORD) {
+      onSuccess(password);
     } else {
       setError('Incorrect password. Please try again.');
       setPassword('');

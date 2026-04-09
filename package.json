@@ -48,7 +48,7 @@
     "*.{ts,tsx}": [
       "eslint --fix",
       "vitest related --run",
-      "tsc -b --noEmit"
+      "bash -c 'tsc -b --noEmit'"
     ]
   }
 }

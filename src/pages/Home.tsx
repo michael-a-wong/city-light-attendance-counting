@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ATTENDANCE_PASSWORD } from '../config/auth';
 import {
   LineChart,
   Line,
@@ -12,18 +13,13 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import {
-  fetchAttendanceRecords,
-  getAuthToken,
-  initializeGoogleAPI,
-  initializeGIS,
-} from '../services/googleSheets';
+import { fetchAttendanceRecords } from '../services/appsScriptService';
 import { fetchMockAttendanceRecords } from '../services/mockData';
 import { AttendanceRecord } from '../types/attendance-types';
 import './Home.css';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
-const SPREADSHEET_ID = import.meta.env.VITE_GOOGLE_SPREADSHEET_ID;
+// Use demo mode if explicitly set OR if Apps Script URL is not configured
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_APPS_SCRIPT_URL;
 
 type LocationFilter = 'all' | 'mission-college-main' | 'mission-college-overflow' | 'silicon-valley-university';
 
@@ -55,9 +51,9 @@ const formatLocationName = (location: string): string => {
 
 const Home = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(DEMO_MODE);
+  const [loading, setLoading] = useState(true); // Start with loading true
   const [error, setError] = useState('');
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
@@ -83,38 +79,19 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    const initializeAPIs = async () => {
-      if (DEMO_MODE) {
-        // In demo mode, load mock data immediately
-        await loadRecords();
-        return;
-      }
-
-      try {
-        await Promise.all([initializeGoogleAPI(), initializeGIS()]);
-      } catch (error) {
-        console.error('Error initializing Google APIs:', error);
-        setError('Failed to initialize Google APIs');
-      }
-    };
-
-    initializeAPIs();
+    // Load records on mount
+    loadRecords();
   }, []);
 
-  const handleAuth = async () => {
-    try {
-      setLoading(true);
-      setError('');
-      await getAuthToken();
-      setIsAuthenticated(true);
-      await loadRecords();
-    } catch (error) {
-      console.error('Authentication error:', error);
-      setError('Authentication failed. Please try again.');
-    } finally {
-      setLoading(false);
+  useEffect(() => {
+    // Reload data when navigating back with refresh state
+    if (location.state && (location.state as { refresh?: boolean }).refresh) {
+      loadRecords();
+      // Clear the state so it doesn't reload again on next render
+      navigate(location.pathname, { replace: true });
     }
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   const loadRecords = async () => {
     try {
@@ -123,7 +100,7 @@ const Home = () => {
 
       const data = DEMO_MODE
         ? await fetchMockAttendanceRecords()
-        : await fetchAttendanceRecords();
+        : await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
 
       // Sort by date
       data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -312,34 +289,12 @@ const Home = () => {
         </div>
       )}
 
-      {!isAuthenticated && (
-        <div className="auth-section">
-          <p>Please authenticate with Google to view attendance data</p>
-          <button onClick={handleAuth} className="auth-button" disabled={loading}>
-            {loading ? 'Authenticating...' : 'Authenticate with Google'}
-          </button>
-        </div>
-      )}
-
       {error && <div className="error-message">{error}</div>}
-
-      {isAuthenticated && (
-        <>
           <div className="controls">
             <div className="controls-left">
               <button onClick={loadRecords} disabled={loading} className="refresh-button">
                 {loading ? 'Loading...' : 'Refresh Data'}
               </button>
-              {!DEMO_MODE && SPREADSHEET_ID && SPREADSHEET_ID !== 'your_spreadsheet_id_here' && (
-                <a
-                  href={`https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/edit`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="sheet-button"
-                >
-                  📊 Open Google Sheet
-                </a>
-              )}
             </div>
 
             <div className="filter-controls">
@@ -394,7 +349,14 @@ const Home = () => {
             </div>
           )}
 
-          {records.length > 0 ? (
+          {loading ? (
+            <div className="chart-container">
+              <h2>Attendance Trends</h2>
+              <div className="loading-spinner" style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="spinner"></div>
+              </div>
+            </div>
+          ) : records.length > 0 ? (
             <div className="chart-container">
               <h2>Attendance Trends</h2>
               <ResponsiveContainer width="100%" height={400}>
@@ -505,7 +467,14 @@ const Home = () => {
             </div>
           )}
 
-          {records.length > 0 && (
+          {loading ? (
+            <div className="recent-records">
+              <h2>Recent Attendance Records</h2>
+              <div className="loading-spinner" style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="spinner"></div>
+              </div>
+            </div>
+          ) : records.length > 0 ? (
             <div className="recent-records">
               <h2>Recent Attendance Records</h2>
               <p className="records-hint">Click on any record to edit</p>
@@ -534,7 +503,7 @@ const Home = () => {
                         <tr
                           key={`${record.date}-${record.location}-${index}`}
                           className="clickable-row"
-                          onClick={() => navigate(`/edit/${encodeURIComponent(record.location)}/${encodeURIComponent(record.date)}`)}
+                          onClick={() => navigate(`/edit/${encodeURIComponent(record.location)}/${encodeURIComponent(record.date.split('T')[0])}`)}
                         >
                           <td>
                             {new Date(record.date).toLocaleDateString('en-US', {
@@ -554,9 +523,14 @@ const Home = () => {
                 </table>
               </div>
             </div>
+          ) : (
+            <div className="recent-records">
+              <h2>Recent Attendance Records</h2>
+              <div className="no-data">
+                <p>No attendance records found. Submit your first record!</p>
+              </div>
+            </div>
           )}
-        </>
-      )}
     </div>
   );
 };

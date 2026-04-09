@@ -1,15 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { submitAttendanceRecord, getAuthToken } from '../services/googleSheets';
-import { submitMockAttendanceRecord } from '../services/mockData';
+import { submitAttendanceRecord, fetchAttendanceRecords } from '../services/appsScriptService';
+import { submitMockAttendanceRecord, fetchMockAttendanceRecords } from '../services/mockData';
 import { AttendanceFormData, AttendanceRecord, LocationType } from '../types/attendance-types';
 import { sanitizeInput } from '../utils/sanitization';
+import { ATTENDANCE_PASSWORD } from '../config/auth';
+import AttendanceFormSections from '../components/AttendanceFormSections';
 import './SubmitAttendance.css';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
+// Use demo mode if explicitly set OR if Apps Script URL is not configured
+const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_APPS_SCRIPT_URL;
 
 const SubmitAttendance = () => {
   const navigate = useNavigate();
+  const [showErrorModal, setShowErrorModal] = useState(false);
   const [formData, setFormData] = useState<AttendanceFormData>({
     name: '',
     date: new Date().toISOString().split('T')[0],
@@ -39,7 +43,6 @@ const SubmitAttendance = () => {
     notes: '',
   });
 
-  const [isAuthenticated, setIsAuthenticated] = useState(DEMO_MODE);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
 
@@ -81,10 +84,6 @@ const SubmitAttendance = () => {
     return parseInt(formData.kids) || 0;
   };
 
-  const calculateCombinedTotal = (): number => {
-    return calculateTotal() + calculateKidsTotal();
-  };
-
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -98,25 +97,8 @@ const SubmitAttendance = () => {
     setFormData((prev) => ({ ...prev, location }));
   };
 
-  const handleAuth = async () => {
-    try {
-      await getAuthToken();
-      setIsAuthenticated(true);
-      setSubmitMessage('Successfully authenticated with Google');
-      setTimeout(() => setSubmitMessage(''), 3000);
-    } catch (error) {
-      console.error('Authentication error:', error);
-      setSubmitMessage('Authentication failed. Please try again.');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!isAuthenticated) {
-      setSubmitMessage('Please authenticate with Google first');
-      return;
-    }
 
     if (!formData.name || !formData.date) {
       setSubmitMessage('Name and date are required');
@@ -127,6 +109,25 @@ const SubmitAttendance = () => {
     setSubmitMessage('');
 
     try {
+      // Check for duplicate records (same date + location)
+      let existingRecords;
+      if (DEMO_MODE) {
+        existingRecords = await fetchMockAttendanceRecords();
+      } else {
+        existingRecords = await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
+      }
+
+      const duplicate = existingRecords.find(
+        (r) => r.date.split('T')[0] === formData.date && r.location === formData.location
+      );
+
+      if (duplicate) {
+        setSubmitMessage('A record already exists for this date and location. Please use the Edit feature to update it.');
+        setShowErrorModal(true);
+        setIsSubmitting(false);
+        return;
+      }
+
       const record: AttendanceRecord = {
         name: formData.name,
         date: formData.date,
@@ -160,19 +161,15 @@ const SubmitAttendance = () => {
       if (DEMO_MODE) {
         await submitMockAttendanceRecord(record);
       } else {
-        await submitAttendanceRecord(record);
+        await submitAttendanceRecord(record, ATTENDANCE_PASSWORD);
       }
 
-      setSubmitMessage('Attendance submitted successfully! Redirecting...');
-
-      // Redirect to dashboard after 1 second
-      setTimeout(() => {
-        navigate('/');
-      }, 1000);
+      // Redirect immediately on success
+      navigate('/', { state: { refresh: true } });
     } catch (error) {
       console.error('Submit error:', error);
-      setSubmitMessage('Error submitting attendance. Please try again.');
-    } finally {
+      setSubmitMessage('Error submitting attendance. Please check your connection and try again.');
+      setShowErrorModal(true);
       setIsSubmitting(false);
     }
   };
@@ -181,16 +178,32 @@ const SubmitAttendance = () => {
 
   return (
     <div className="submit-container">
+      {isSubmitting && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="spinner"></div>
+            <p>Submitting attendance...</p>
+          </div>
+        </div>
+      )}
+
+      {showErrorModal && (
+        <div className="error-modal-overlay" onClick={() => setShowErrorModal(false)}>
+          <div className="error-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="error-modal-icon">⚠️</div>
+            <h2>Submission Error</h2>
+            <p>{submitMessage}</p>
+            <button onClick={() => setShowErrorModal(false)} className="error-modal-button">
+              OK
+            </button>
+          </div>
+        </div>
+      )}
+
       {DEMO_MODE && (
         <div className="demo-banner">
           <strong>Demo Mode:</strong> Submissions will be saved to mock data only (not Google Sheets).
         </div>
-      )}
-
-      {!isAuthenticated && (
-        <button onClick={handleAuth} className="auth-button">
-          Authenticate with Google
-        </button>
       )}
 
       {submitMessage && (
@@ -325,302 +338,7 @@ const SubmitAttendance = () => {
           )}
         </div>
 
-        <h2>Section Counts</h2>
-
-        {/* Mission College Main Room */}
-        {formData.location === 'mission-college-main' && (
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="farLeft">Far left *</label>
-              <input
-                type="number"
-                id="farLeft"
-                name="farLeft"
-                value={formData.farLeft}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="left">Left *</label>
-              <input
-                type="number"
-                id="left"
-                name="left"
-                value={formData.left}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="middleLeft">Middle left *</label>
-              <input
-                type="number"
-                id="middleLeft"
-                name="middleLeft"
-                value={formData.middleLeft}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="middleRight">Middle right *</label>
-              <input
-                type="number"
-                id="middleRight"
-                name="middleRight"
-                value={formData.middleRight}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="right">Right *</label>
-              <input
-                type="number"
-                id="right"
-                name="right"
-                value={formData.right}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="farRight">Far right *</label>
-              <input
-                type="number"
-                id="farRight"
-                name="farRight"
-                value={formData.farRight}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="back">Back *</label>
-              <input
-                type="number"
-                id="back"
-                name="back"
-                value={formData.back}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="adjustment">Adjustment *</label>
-              <input
-                type="number"
-                id="adjustment"
-                name="adjustment"
-                value={formData.adjustment}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="kids">Kids (Total from all locations) *</label>
-              <input
-                type="number"
-                id="kids"
-                name="kids"
-                value={formData.kids}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Mission College Overflow Room */}
-        {formData.location === 'mission-college-overflow' && (
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="overflow1">Overflow 1: Gillmor Lecture Hall 103 *</label>
-              <input
-                type="number"
-                id="overflow1"
-                name="overflow1"
-                value={formData.overflow1}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="overflow2">Overflow 2: Gillmor Lecture Hall 107 *</label>
-              <input
-                type="number"
-                id="overflow2"
-                name="overflow2"
-                value={formData.overflow2}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="momsRoom">Mom's Room: Gillmor Classroom 202 *</label>
-              <input
-                type="number"
-                id="momsRoom"
-                name="momsRoom"
-                value={formData.momsRoom}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="familyRoom">Family Room: Gillmor Classroom 219 *</label>
-              <input
-                type="number"
-                id="familyRoom"
-                name="familyRoom"
-                value={formData.familyRoom}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="adjustment">Adjustment *</label>
-              <input
-                type="number"
-                id="adjustment"
-                name="adjustment"
-                value={formData.adjustment}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="kids">Kids (Total from all locations) *</label>
-              <input
-                type="number"
-                id="kids"
-                name="kids"
-                value={formData.kids}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Silicon Valley University */}
-        {formData.location === 'silicon-valley-university' && (
-          <div className="form-grid">
-            <div className="form-group">
-              <label htmlFor="leftWingLeftColumn">Left Wing Left Column *</label>
-              <input
-                type="number"
-                id="leftWingLeftColumn"
-                name="leftWingLeftColumn"
-                value={formData.leftWingLeftColumn}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="leftWingRightColumn">Left Wing Right Column *</label>
-              <input
-                type="number"
-                id="leftWingRightColumn"
-                name="leftWingRightColumn"
-                value={formData.leftWingRightColumn}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="rightWingLeftColumn">Right Wing Left Column *</label>
-              <input
-                type="number"
-                id="rightWingLeftColumn"
-                name="rightWingLeftColumn"
-                value={formData.rightWingLeftColumn}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="rightWingRightColumn">Right Wing Right Column *</label>
-              <input
-                type="number"
-                id="rightWingRightColumn"
-                name="rightWingRightColumn"
-                value={formData.rightWingRightColumn}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="svuFamilyOverflow">Family / Overflow Room *</label>
-              <input
-                type="number"
-                id="svuFamilyOverflow"
-                name="svuFamilyOverflow"
-                value={formData.svuFamilyOverflow}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="adjustment">Adjustment *</label>
-              <input
-                type="number"
-                id="adjustment"
-                name="adjustment"
-                value={formData.adjustment}
-                onChange={handleInputChange}
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="kids">Kids (Total from all locations) *</label>
-              <input
-                type="number"
-                id="kids"
-                name="kids"
-                value={formData.kids}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-          </div>
-        )}
+        <AttendanceFormSections formData={formData} onChange={handleInputChange} />
 
         <div className="form-group">
           <label htmlFor="notes">Notes or comments</label>
@@ -643,12 +361,12 @@ const SubmitAttendance = () => {
             <span className="total-value">{calculateKidsTotal()}</span>
           </div>
           <div className="total-row total-combined">
-            <span className="total-label">Total</span>
-            <span className="total-value">{calculateCombinedTotal()}</span>
+            <span className="total-label">Total (Adults + Kids)</span>
+            <span className="total-value">{total + calculateKidsTotal()}</span>
           </div>
         </div>
 
-        <button type="submit" disabled={isSubmitting || !isAuthenticated} className="submit-button">
+        <button type="submit" className="submit-button" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
         </button>
       </form>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Cookies from 'js-cookie';
+import { AuthProvider } from './contexts/AuthContext';
 import Home from './pages/Home';
 import SubmitAttendance from './pages/SubmitAttendance';
 import EditAttendance from './pages/EditAttendance';
@@ -52,7 +53,7 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
   );
 }
 
-function App() {
+function AppContent() {
   // Check for authentication cookie
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return Cookies.get('clbc-auth') === 'true';
@@ -120,6 +121,14 @@ function App() {
         </main>
       </div>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
