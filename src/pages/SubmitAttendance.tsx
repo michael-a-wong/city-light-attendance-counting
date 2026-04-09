@@ -237,7 +237,7 @@ const SubmitAttendance = () => {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="attendance-form">
+      <form id="attendance-form" onSubmit={handleSubmit} className="attendance-form">
         <div className="form-group">
           <label htmlFor="name">Name *</label>
           <input
@@ -315,10 +315,10 @@ const SubmitAttendance = () => {
             <>
               <h3>Mission College Overflow - Instructions</h3>
               <ul>
-                <li><strong>Overflow 1:</strong> Gillmor Lecture Hall 103</li>
-                <li><strong>Overflow 2:</strong> Gillmor Lecture Hall 107</li>
-                <li><strong>Mom's Room:</strong> Gillmor Classroom 202</li>
-                <li><strong>Family Room:</strong> Gillmor Classroom 219</li>
+                <li><strong>Overflow 1:</strong> Gillmor Lecture Hall 103 (Adults only)</li>
+                <li><strong>Overflow 2:</strong> Gillmor Lecture Hall 107 (Adults only)</li>
+                <li><strong>Mom's Room:</strong> Gillmor Classroom 202 (Adults only)</li>
+                <li><strong>Family Room:</strong> Gillmor Classroom 219 (Adults only)</li>
                 <li>Count <strong>adults only</strong> in each room - kids are counted separately below</li>
                 <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
                 <li><strong>Kids:</strong> Total children in all overflow rooms (we do NOT count children's ministry)</li>

@@ -173,7 +173,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
           </div>
 
           <div className="form-group">
-            <label htmlFor="familyRoom">Family Room: Gillmor Classroom 219 *</label>
+            <label htmlFor="familyRoom">Family Room: Gillmor Classroom 219 (Adults only) *</label>
             <input
               type="number"
               id="familyRoom"

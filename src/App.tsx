@@ -13,6 +13,17 @@ type Theme = 'light' | 'dark';
 function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => void }) {
   const location = useLocation();
 
+  const handleSubmitAttendanceClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    // If already on submit page, trigger form submission instead of navigating
+    if (location.pathname === '/submit') {
+      e.preventDefault();
+      const form = document.getElementById('attendance-form') as HTMLFormElement;
+      if (form) {
+        form.requestSubmit();
+      }
+    }
+  };
+
   return (
     <nav className="nav">
       <div className="nav-container">
@@ -29,6 +40,7 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
           </Link>
           <Link
             to="/submit"
+            onClick={handleSubmitAttendanceClick}
             className={`nav-link ${location.pathname === '/submit' ? 'active' : ''}`}
           >
             Submit Attendance
