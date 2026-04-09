@@ -226,7 +226,9 @@ const SubmitAttendance = () => {
         <div className="loading-overlay">
           <div className="loading-content">
             <div className="spinner"></div>
-            <p>Submitting attendance...</p>
+            <p style={{ color: '#ffffff', fontSize: '1.125rem', fontWeight: 600, margin: 0, textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}>
+              Submitting attendance...
+            </p>
           </div>
         </div>
       )}
