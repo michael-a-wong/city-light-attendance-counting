@@ -202,7 +202,7 @@
     align-items: center;
     justify-content: center;
     background: var(--accent);
-    color: white;
+    color: white !important;
     padding: 0.625rem 1rem;
     border-radius: 6px;
     font-size: 0.9375rem;
@@ -213,11 +213,23 @@
     transition: all 0.2s;
     flex-shrink: 0;
     white-space: nowrap;
+    -webkit-tap-highlight-color: rgba(0, 0, 0, 0.1);
+  }
+
+  .mobile-submit-button:hover,
+  .mobile-submit-button:active,
+  .mobile-submit-button:visited {
+    background: var(--accent-hover);
+    color: white !important;
+    text-decoration: none;
   }
 
   .mobile-submit-button:hover {
-    background: var(--accent-hover);
     transform: translateY(-1px);
+  }
+
+  .mobile-submit-button:active {
+    transform: translateY(0);
   }
 
   /* Show hamburger button on mobile */
