@@ -181,82 +181,6 @@ const SubmitAttendance = () => {
 
   return (
     <div className="submit-container">
-      <div className="info-section">
-        {formData.location === 'mission-college-main' && (
-          <>
-            <h3>Mission College Main Room - Instructions</h3>
-            <ul>
-              <li>All descriptors (far left, etc.) are when <strong>facing the stage</strong></li>
-              <li>Count <strong>adults only</strong> in each section - kids are counted separately below</li>
-              <li><strong>Back section:</strong> Tech team, purple chairs along the wall, and anyone outside</li>
-              <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
-              <li><strong>Kids:</strong> Total children in the room (we do NOT count children's ministry)</li>
-            </ul>
-            <p>
-              📄 View detailed instructions{' '}
-              <a
-                href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="instructions-link"
-              >
-                Here
-              </a>
-            </p>
-          </>
-        )}
-        {formData.location === 'mission-college-overflow' && (
-          <>
-            <h3>Mission College Overflow - Instructions</h3>
-            <ul>
-              <li><strong>Overflow 1:</strong> Gillmor Lecture Hall 103</li>
-              <li><strong>Overflow 2:</strong> Gillmor Lecture Hall 107</li>
-              <li><strong>Mom's Room:</strong> Gillmor Classroom 202</li>
-              <li><strong>Family Room:</strong> Gillmor Classroom 219</li>
-              <li>Count <strong>adults only</strong> in each room - kids are counted separately below</li>
-              <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
-              <li><strong>Kids:</strong> Total children in all overflow rooms (we do NOT count children's ministry)</li>
-            </ul>
-            <p>
-              📄 View detailed instructions{' '}
-              <a
-                href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="instructions-link"
-              >
-                Here
-              </a>
-            </p>
-          </>
-        )}
-        {formData.location === 'silicon-valley-university' && (
-          <>
-            <h3>Silicon Valley University - Instructions</h3>
-            <ul>
-              <li>Count each wing and column separately when <strong>facing the stage</strong></li>
-              <li><strong>Left Wing:</strong> Has left and right columns</li>
-              <li><strong>Right Wing:</strong> Has left and right columns</li>
-              <li>Count <strong>adults only</strong> in each section - kids are counted separately below</li>
-              <li><strong>Family/Overflow Room:</strong> Separate room for families with young children</li>
-              <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
-              <li><strong>Kids:</strong> Total children in the venue (we do NOT count children's ministry)</li>
-            </ul>
-            <p>
-              📄 View detailed instructions{' '}
-              <a
-                href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="instructions-link"
-              >
-                Here
-              </a>
-            </p>
-          </>
-        )}
-      </div>
-
       {DEMO_MODE && (
         <div className="demo-banner">
           <strong>Demo Mode:</strong> Submissions will be saved to mock data only (not Google Sheets).
@@ -323,6 +247,82 @@ const SubmitAttendance = () => {
           >
             Silicon Valley University
           </button>
+        </div>
+
+        <div className="info-section">
+          {formData.location === 'mission-college-main' && (
+            <>
+              <h3>Mission College Main Room - Instructions</h3>
+              <ul>
+                <li>All descriptors (far left, etc.) are when <strong>facing the stage</strong></li>
+                <li>Count <strong>adults only</strong> in each section - kids are counted separately below</li>
+                <li><strong>Back section:</strong> Tech team, purple chairs along the wall, and anyone outside</li>
+                <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
+                <li><strong>Kids:</strong> Total children in the room (we do NOT count children's ministry)</li>
+              </ul>
+              <p>
+                📄 View detailed instructions{' '}
+                <a
+                  href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="instructions-link"
+                >
+                  Here
+                </a>
+              </p>
+            </>
+          )}
+          {formData.location === 'mission-college-overflow' && (
+            <>
+              <h3>Mission College Overflow - Instructions</h3>
+              <ul>
+                <li><strong>Overflow 1:</strong> Gillmor Lecture Hall 103</li>
+                <li><strong>Overflow 2:</strong> Gillmor Lecture Hall 107</li>
+                <li><strong>Mom's Room:</strong> Gillmor Classroom 202</li>
+                <li><strong>Family Room:</strong> Gillmor Classroom 219</li>
+                <li>Count <strong>adults only</strong> in each room - kids are counted separately below</li>
+                <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
+                <li><strong>Kids:</strong> Total children in all overflow rooms (we do NOT count children's ministry)</li>
+              </ul>
+              <p>
+                📄 View detailed instructions{' '}
+                <a
+                  href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="instructions-link"
+                >
+                  Here
+                </a>
+              </p>
+            </>
+          )}
+          {formData.location === 'silicon-valley-university' && (
+            <>
+              <h3>Silicon Valley University - Instructions</h3>
+              <ul>
+                <li>Count each wing and column separately when <strong>facing the stage</strong></li>
+                <li><strong>Left Wing:</strong> Has left and right columns</li>
+                <li><strong>Right Wing:</strong> Has left and right columns</li>
+                <li>Count <strong>adults only</strong> in each section - kids are counted separately below</li>
+                <li><strong>Family/Overflow Room:</strong> Separate room for families with young children</li>
+                <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
+                <li><strong>Kids:</strong> Total children in the venue (we do NOT count children's ministry)</li>
+              </ul>
+              <p>
+                📄 View detailed instructions{' '}
+                <a
+                  href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="instructions-link"
+                >
+                  Here
+                </a>
+              </p>
+            </>
+          )}
         </div>
 
         <h2>Section Counts</h2>
