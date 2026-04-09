@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ATTENDANCE_PASSWORD } from '../config/auth';
+import { useAttendanceData } from '../contexts/AttendanceDataContext';
 import {
   LineChart,
   Line,
@@ -13,12 +13,8 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import { fetchAttendanceRecords } from '../services/appsScriptService';
-import { fetchMockAttendanceRecords } from '../services/mockData';
-import { AttendanceRecord } from '../types/attendance-types';
 import './Home.css';
 
-// Use demo mode if explicitly set OR if Apps Script URL is not configured
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_APPS_SCRIPT_URL;
 
 type LocationFilter = 'all' | 'mission-college-main' | 'mission-college-overflow' | 'silicon-valley-university';
@@ -56,14 +52,17 @@ const parseLocalDate = (dateString: string): Date => {
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
-  const [loading, setLoading] = useState(true); // Start with loading true
-  const [error, setError] = useState('');
+  const { records, isLoading: loading, error, refresh } = useAttendanceData();
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
+
+  // Sort records by date
+  const sortedRecords = [...records].sort((a, b) =>
+    parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime()
+  );
 
   // Detect theme changes
   useEffect(() => {
@@ -85,50 +84,25 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    // Load records on mount
-    loadRecords();
-  }, []);
-
-  useEffect(() => {
     // Reload data when navigating back with refresh state
     if (location.state && (location.state as { refresh?: boolean }).refresh) {
-      loadRecords();
+      refresh();
       // Clear the state so it doesn't reload again on next render
       navigate(location.pathname, { replace: true });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
-  const loadRecords = async () => {
-    try {
-      setLoading(true);
-      setError('');
-
-      const data = DEMO_MODE
-        ? await fetchMockAttendanceRecords()
-        : await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
-
-      // Sort by date
-      data.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
-      setRecords(data);
-    } catch (error) {
-      console.error('Error loading records:', error);
-      setError('Failed to load attendance records');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const getChartData = () => {
     // Get unique dates, sorted newest to oldest
-    const uniqueDates = [...new Set(records.map(r => r.date))]
+    const uniqueDates = [...new Set(sortedRecords.map(r => r.date))]
       .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime());
 
     // Take the last 10 dates
     const last10Dates = uniqueDates.slice(0, 10).reverse(); // Reverse to show oldest to newest in chart
 
     // Filter records to only those dates
-    const recentRecords = records.filter(record =>
+    const recentRecords = sortedRecords.filter(record =>
       last10Dates.includes(record.date)
     );
 
@@ -299,10 +273,10 @@ const Home = () => {
 
   // Pagination calculations - filter by location first
   const filteredRecordsForTable = locationFilter === 'all'
-    ? records
-    : records.filter(r => r.location === locationFilter);
+    ? sortedRecords
+    : sortedRecords.filter(r => r.location === locationFilter);
 
-  const sortedRecords = filteredRecordsForTable
+  const sortedTableRecords = filteredRecordsForTable
     .slice()
     .sort((a, b) => {
       const dateCompare = parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime();
@@ -310,10 +284,10 @@ const Home = () => {
       return (b.timestamp || '').localeCompare(a.timestamp || '');
     });
 
-  const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
+  const totalPages = Math.ceil(sortedTableRecords.length / recordsPerPage);
   const startIndex = (currentPage - 1) * recordsPerPage;
   const endIndex = startIndex + recordsPerPage;
-  const currentRecords = sortedRecords.slice(startIndex, endIndex);
+  const currentRecords = sortedTableRecords.slice(startIndex, endIndex);
 
   // Reset to page 1 when records change
   useEffect(() => {
@@ -359,7 +333,7 @@ const Home = () => {
       {error && <div className="error-message">{error}</div>}
           <div className="controls">
             <div className="controls-left">
-              <button onClick={loadRecords} disabled={loading} className="refresh-button">
+              <button onClick={refresh} disabled={loading} className="refresh-button">
                 {loading ? 'Loading...' : 'Refresh Data'}
               </button>
             </div>

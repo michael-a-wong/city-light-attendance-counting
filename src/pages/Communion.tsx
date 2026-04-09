@@ -1,52 +1,11 @@
-import { useState, useEffect } from 'react';
-import { fetchAttendanceRecords } from '../services/appsScriptService';
-import { fetchMockAttendanceRecords } from '../services/mockData';
-import { AttendanceRecord } from '../types/attendance-types';
-import { ATTENDANCE_PASSWORD } from '../config/auth';
+import { useState } from 'react';
+import { useAttendanceData } from '../contexts/AttendanceDataContext';
 import './Communion.css';
 
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_APPS_SCRIPT_URL;
-
 const Communion = () => {
-  const [records, setRecords] = useState<AttendanceRecord[]>([]);
+  const { records, isLoading, isRefreshing, error, refresh } = useAttendanceData();
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedLocation, setSelectedLocation] = useState<'mission-college' | 'silicon-valley-university'>('mission-college');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [error, setError] = useState<string>('');
-
-  const loadRecords = async (isRefresh = false) => {
-    if (isRefresh) {
-      setIsRefreshing(true);
-    } else {
-      setIsLoading(true);
-    }
-    setError('');
-
-    try {
-      let data: AttendanceRecord[];
-      if (DEMO_MODE) {
-        data = await fetchMockAttendanceRecords();
-      } else {
-        data = await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
-      }
-      setRecords(data);
-    } catch (err) {
-      console.error('Error loading records:', err);
-      setError('Error loading attendance records');
-    } finally {
-      setIsLoading(false);
-      setIsRefreshing(false);
-    }
-  };
-
-  useEffect(() => {
-    loadRecords();
-  }, []);
-
-  const handleRefresh = () => {
-    loadRecords(true);
-  };
 
   // Get unique dates sorted newest first
   const uniqueDates = [...new Set(records.map(r => r.date.split('T')[0]))]
@@ -118,7 +77,7 @@ const Communion = () => {
       <div className="communion-header">
         <h1>Communion Counts</h1>
         <button
-          onClick={handleRefresh}
+          onClick={refresh}
           className="refresh-button"
           disabled={isRefreshing}
           aria-label="Refresh data"

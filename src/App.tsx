@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import Cookies from 'js-cookie';
 import { AuthProvider } from './contexts/AuthContext';
+import { AttendanceDataProvider } from './contexts/AttendanceDataContext';
 import Home from './pages/Home';
 import SubmitAttendance from './pages/SubmitAttendance';
 import EditAttendance from './pages/EditAttendance';
@@ -128,19 +129,21 @@ function AppContent() {
   }
 
   return (
-    <Router>
-      <div className="app">
-        <Navigation theme={theme} toggleTheme={toggleTheme} />
-        <main className="main-content">
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/submit" element={<SubmitAttendance />} />
-            <Route path="/communion" element={<Communion />} />
-            <Route path="/edit/:location/:date" element={<EditAttendance />} />
-          </Routes>
-        </main>
-      </div>
-    </Router>
+    <AttendanceDataProvider>
+      <Router>
+        <div className="app">
+          <Navigation theme={theme} toggleTheme={toggleTheme} />
+          <main className="main-content">
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/submit" element={<SubmitAttendance />} />
+              <Route path="/communion" element={<Communion />} />
+              <Route path="/edit/:location/:date" element={<EditAttendance />} />
+            </Routes>
+          </main>
+        </div>
+      </Router>
+    </AttendanceDataProvider>
   );
 }
 
