@@ -2,12 +2,113 @@
   max-width: 1000px;
   margin: 0 auto;
   padding: 2rem;
+  position: relative;
 }
 
-.communion-container h1 {
-  color: var(--text);
+.communion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 2rem;
+  gap: 1rem;
+}
+
+.communion-header h1 {
+  color: var(--text);
+  margin: 0;
+  flex: 1;
+}
+
+.refresh-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.refresh-button svg {
+  flex-shrink: 0;
+}
+
+.refresh-button svg.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+
+.loading-content {
+  background: var(--card);
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   text-align: center;
+}
+
+.spinner {
+  border: 4px solid rgba(0, 123, 255, 0.1);
+  border-left-color: var(--accent);
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 1rem;
+}
+
+.loading-content p {
+  color: var(--text);
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.error-banner {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border: 1px solid #f5c6cb;
+  font-weight: 500;
 }
 
 .communion-controls {
@@ -133,18 +234,19 @@
   color: var(--secondary);
 }
 
-.loading,
-.error {
-  text-align: center;
-  padding: 2rem;
-  color: var(--secondary);
-}
-
-.error {
-  color: #dc3545;
-}
-
 @media (max-width: 768px) {
+  .communion-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .communion-header h1 {
+    text-align: center;
+  }
+
+  .refresh-button {
+    justify-content: center;
+  }
   .communion-controls {
     grid-template-columns: 1fr;
     gap: 1rem;

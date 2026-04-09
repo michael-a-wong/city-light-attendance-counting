@@ -12,28 +12,41 @@ const Communion = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedLocation, setSelectedLocation] = useState<'mission-college' | 'silicon-valley-university'>('mission-college');
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string>('');
 
-  useEffect(() => {
-    const loadRecords = async () => {
-      try {
-        let data: AttendanceRecord[];
-        if (DEMO_MODE) {
-          data = await fetchMockAttendanceRecords();
-        } else {
-          data = await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
-        }
-        setRecords(data);
-        setIsLoading(false);
-      } catch (err) {
-        console.error('Error loading records:', err);
-        setError('Error loading attendance records');
-        setIsLoading(false);
-      }
-    };
+  const loadRecords = async (isRefresh = false) => {
+    if (isRefresh) {
+      setIsRefreshing(true);
+    } else {
+      setIsLoading(true);
+    }
+    setError('');
 
+    try {
+      let data: AttendanceRecord[];
+      if (DEMO_MODE) {
+        data = await fetchMockAttendanceRecords();
+      } else {
+        data = await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
+      }
+      setRecords(data);
+    } catch (err) {
+      console.error('Error loading records:', err);
+      setError('Error loading attendance records');
+    } finally {
+      setIsLoading(false);
+      setIsRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
     loadRecords();
   }, []);
+
+  const handleRefresh = () => {
+    loadRecords(true);
+  };
 
   // Get unique dates sorted newest first
   const uniqueDates = [...new Set(records.map(r => r.date.split('T')[0]))]
@@ -81,24 +94,55 @@ const Communion = () => {
   if (isLoading) {
     return (
       <div className="communion-container">
-        <h1>Communion Counts</h1>
-        <div className="loading">Loading...</div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="communion-container">
-        <h1>Communion Counts</h1>
-        <div className="error">{error}</div>
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="spinner"></div>
+            <p>Loading communion data...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="communion-container">
-      <h1>Communion Counts</h1>
+      {isRefreshing && (
+        <div className="loading-overlay">
+          <div className="loading-content">
+            <div className="spinner"></div>
+            <p>Refreshing data...</p>
+          </div>
+        </div>
+      )}
+
+      <div className="communion-header">
+        <h1>Communion Counts</h1>
+        <button
+          onClick={handleRefresh}
+          className="refresh-button"
+          disabled={isRefreshing}
+          aria-label="Refresh data"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={isRefreshing ? 'spinning' : ''}
+          >
+            <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="error-banner">
+          {error}
+        </div>
+      )}
 
       <div className="communion-controls">
         <div className="form-group">
