@@ -6,6 +6,11 @@ interface AttendanceFormSectionsProps {
 }
 
 const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsProps) => {
+  // Select all text when clicking on a number input
+  const handleFocus = (e: React.FocusEvent<HTMLInputElement>) => {
+    e.target.select();
+  };
+
   return (
     <>
       <h2>Section Counts</h2>
@@ -21,6 +26,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="farLeft"
               value={formData.farLeft}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -34,6 +40,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="left"
               value={formData.left}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -47,6 +54,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="middleLeft"
               value={formData.middleLeft}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -60,6 +68,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="middleRight"
               value={formData.middleRight}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -73,6 +82,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="right"
               value={formData.right}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -86,6 +96,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="farRight"
               value={formData.farRight}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -99,6 +110,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="back"
               value={formData.back}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -112,6 +124,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="adjustment"
               value={formData.adjustment}
               onChange={onChange}
+              onFocus={handleFocus}
             />
           </div>
 
@@ -123,6 +136,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="kids"
               value={formData.kids}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -141,6 +155,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="overflow1"
               value={formData.overflow1}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -154,6 +169,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="overflow2"
               value={formData.overflow2}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -167,6 +183,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="momsRoom"
               value={formData.momsRoom}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -180,6 +197,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="familyRoom"
               value={formData.familyRoom}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -193,6 +211,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="adjustment"
               value={formData.adjustment}
               onChange={onChange}
+              onFocus={handleFocus}
             />
           </div>
 
@@ -204,6 +223,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="kids"
               value={formData.kids}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -222,6 +242,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="leftWingLeftColumn"
               value={formData.leftWingLeftColumn}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -235,6 +256,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="leftWingRightColumn"
               value={formData.leftWingRightColumn}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -248,6 +270,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="rightWingLeftColumn"
               value={formData.rightWingLeftColumn}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -261,6 +284,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="rightWingRightColumn"
               value={formData.rightWingRightColumn}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -274,6 +298,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="svuFamilyOverflow"
               value={formData.svuFamilyOverflow}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
@@ -287,6 +312,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="adjustment"
               value={formData.adjustment}
               onChange={onChange}
+              onFocus={handleFocus}
             />
           </div>
 
@@ -298,6 +324,7 @@ const AttendanceFormSections = ({ formData, onChange }: AttendanceFormSectionsPr
               name="kids"
               value={formData.kids}
               onChange={onChange}
+              onFocus={handleFocus}
               min="0"
               required
             />
