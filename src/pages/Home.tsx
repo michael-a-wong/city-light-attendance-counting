@@ -17,7 +17,7 @@ import './Home.css';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_APPS_SCRIPT_URL;
 
-type LocationFilter = 'all' | 'mission-college-main' | 'mission-college-overflow' | 'silicon-valley-university';
+type LocationFilter = 'all' | 'mission-college' | 'silicon-valley-university';
 
 interface ChartDataPoint {
   date: string;
@@ -58,6 +58,11 @@ const Home = () => {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const recordsPerPage = 10;
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  // Weekly summary state
+  const [selectedWeek, setSelectedWeek] = useState<string>('');
+  const [summaryLocation, setSummaryLocation] = useState<LocationFilter>('all');
 
   // Sort records by date
   const sortedRecords = [...records].sort((a, b) =>
@@ -81,6 +86,16 @@ const Home = () => {
     });
 
     return () => observer.disconnect();
+  }, []);
+
+  // Detect mobile viewport
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -107,7 +122,7 @@ const Home = () => {
     );
 
     if (locationFilter === 'all') {
-      // For "All Locations", show individual location lines + combined total
+      // For "All Locations", show MC Main Total, MC Overflow Total, and SVU Total lines
       const groupedByDate = recentRecords.reduce((acc, record) => {
         const dateKey = record.date;
         if (!acc[dateKey]) {
@@ -121,17 +136,14 @@ const Home = () => {
         }
 
         // Add to specific location (adults + kids)
-        let locationKey: 'MC Main Total' | 'MC Overflow Total' | 'SVU Total';
-        if (record.location === 'mission-college-main') {
-          locationKey = 'MC Main Total';
-        } else if (record.location === 'mission-college-overflow') {
-          locationKey = 'MC Overflow Total';
-        } else {
-          locationKey = 'SVU Total';
-        }
-
         const locationTotal = record.total + record.kids;
-        acc[dateKey][locationKey] = (acc[dateKey][locationKey] || 0) + locationTotal;
+        if (record.location === 'mission-college-main') {
+          acc[dateKey]['MC Main Total'] = (acc[dateKey]['MC Main Total'] || 0) + locationTotal;
+        } else if (record.location === 'mission-college-overflow') {
+          acc[dateKey]['MC Overflow Total'] = (acc[dateKey]['MC Overflow Total'] || 0) + locationTotal;
+        } else {
+          acc[dateKey]['SVU Total'] = (acc[dateKey]['SVU Total'] || 0) + locationTotal;
+        }
 
         // Add to combined total
         acc[dateKey]['Combined Total'] = (acc[dateKey]['Combined Total'] || 0) + locationTotal;
@@ -153,7 +165,12 @@ const Home = () => {
         }));
     } else {
       // For specific location, show just that location's data
-      const filteredRecords = recentRecords.filter(r => r.location === locationFilter);
+      const filteredRecords = recentRecords.filter(r => {
+        if (locationFilter === 'mission-college') {
+          return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
+        }
+        return r.location === locationFilter;
+      });
 
       const groupedByDate = filteredRecords.reduce((acc, record) => {
         const dateKey = record.date;
@@ -221,7 +238,12 @@ const Home = () => {
     // Filter records by location if not 'all'
     const filteredRecords = locationFilter === 'all'
       ? recentRecords
-      : recentRecords.filter(r => r.location === locationFilter);
+      : recentRecords.filter(r => {
+          if (locationFilter === 'mission-college') {
+            return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
+          }
+          return r.location === locationFilter;
+        });
 
     if (filteredRecords.length === 0) return null;
 
@@ -271,10 +293,132 @@ const Home = () => {
 
   const stats = getStats();
 
+  // Get available weeks (Sundays) from records
+  const getAvailableWeeks = () => {
+    const sundays = [...new Set(sortedRecords.map(r => r.date.split('T')[0]))]
+      .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime());
+    return sundays;
+  };
+
+  const availableWeeks = getAvailableWeeks();
+
+  // Set initial week if not set
+  useEffect(() => {
+    if (availableWeeks.length > 0 && !selectedWeek) {
+      setSelectedWeek(availableWeeks[0]);
+    }
+  }, [availableWeeks, selectedWeek]);
+
+  // Calculate weekly summary
+  const getWeeklySummary = () => {
+    if (!selectedWeek) return null;
+
+    const weekRecords = sortedRecords.filter(r => {
+      const recordDate = r.date.split('T')[0];
+      return recordDate === selectedWeek;
+    });
+
+    // Filter by location
+    const filteredWeekRecords = summaryLocation === 'all'
+      ? weekRecords
+      : weekRecords.filter(r => {
+          if (summaryLocation === 'mission-college') {
+            return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
+          }
+          return r.location === summaryLocation;
+        });
+
+    if (filteredWeekRecords.length === 0) return null;
+
+    // Calculate totals
+    let totalAdults = 0;
+    let totalKids = 0;
+    const locationBreakdown: Record<string, { adults: number; kids: number; count: number }> = {};
+
+    filteredWeekRecords.forEach(record => {
+      totalAdults += record.total;
+      totalKids += record.kids;
+
+      if (!locationBreakdown[record.location]) {
+        locationBreakdown[record.location] = { adults: 0, kids: 0, count: 0 };
+      }
+      locationBreakdown[record.location].adults += record.total;
+      locationBreakdown[record.location].kids += record.kids;
+      locationBreakdown[record.location].count += 1;
+    });
+
+    return {
+      date: selectedWeek,
+      totalAdults,
+      totalKids,
+      totalCombined: totalAdults + totalKids,
+      locationBreakdown,
+      recordCount: filteredWeekRecords.length,
+    };
+  };
+
+  const weeklySummary = getWeeklySummary();
+
+  // Generate copyable text
+  const generateSummaryText = () => {
+    if (!weeklySummary) return '';
+
+    const date = new Date(weeklySummary.date + 'T00:00:00');
+    const formattedDate = date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+
+    let text = `Weekly Attendance Summary - ${formattedDate}\n`;
+    text += `${'='.repeat(60)}\n\n`;
+
+    if (summaryLocation === 'all') {
+      text += `Total Adults: ${weeklySummary.totalAdults}\n`;
+      text += `Total Kids: ${weeklySummary.totalKids}\n`;
+      text += `Total Combined: ${weeklySummary.totalCombined}\n\n`;
+
+      text += `Breakdown by Location:\n`;
+      text += `${'-'.repeat(40)}\n`;
+      Object.entries(weeklySummary.locationBreakdown).forEach(([loc, data]) => {
+        const locationName = formatLocationName(loc);
+        text += `${locationName}:\n`;
+        text += `  Adults: ${data.adults}\n`;
+        text += `  Kids: ${data.kids}\n`;
+        text += `  Total: ${data.adults + data.kids}\n\n`;
+      });
+    } else {
+      const locationName = formatLocationName(summaryLocation);
+      text += `Location: ${locationName}\n\n`;
+      text += `Total Adults: ${weeklySummary.totalAdults}\n`;
+      text += `Total Kids: ${weeklySummary.totalKids}\n`;
+      text += `Total Combined: ${weeklySummary.totalCombined}\n`;
+    }
+
+    return text;
+  };
+
+  const copyToClipboard = async () => {
+    const text = generateSummaryText();
+    try {
+      await navigator.clipboard.writeText(text);
+      alert('Summary copied to clipboard!');
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      alert('Failed to copy to clipboard');
+    }
+  };
+
   // Pagination calculations - filter by location first
   const filteredRecordsForTable = locationFilter === 'all'
     ? sortedRecords
-    : sortedRecords.filter(r => r.location === locationFilter);
+    : sortedRecords.filter(r => {
+        if (locationFilter === 'mission-college') {
+          return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
+        }
+        return r.location === locationFilter;
+      });
 
   const sortedTableRecords = filteredRecordsForTable
     .slice()
@@ -348,8 +492,7 @@ const Home = () => {
                   className="location-select"
                 >
                   <option value="all">All Locations</option>
-                  <option value="mission-college-main">Mission College Main</option>
-                  <option value="mission-college-overflow">Mission College Overflow</option>
+                  <option value="mission-college">Mission College</option>
                   <option value="silicon-valley-university">Silicon Valley University</option>
                 </select>
               </div>
@@ -400,14 +543,33 @@ const Home = () => {
           ) : records.length > 0 ? (
             <div className="chart-container">
               <h2>Recent Attendance Trends</h2>
-              <ResponsiveContainer width="100%" height={400}>
+              <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
                 {chartType === 'line' ? (
                   <LineChart data={getChartData() as never}>
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                    <XAxis dataKey="date" stroke={colors.axis} />
-                    <YAxis stroke={colors.axis} />
-                    <Tooltip contentStyle={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', border: `1px solid ${colors.grid}` }} />
-                    <Legend />
+                    <XAxis
+                      dataKey="date"
+                      stroke={colors.axis}
+                      angle={isMobile ? -45 : 0}
+                      textAnchor={isMobile ? "end" : "middle"}
+                      height={isMobile ? 60 : 30}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                    />
+                    <YAxis
+                      stroke={colors.axis}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                        border: `1px solid ${colors.grid}`,
+                        fontSize: isMobile ? '12px' : '14px'
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: isMobile ? '11px' : '14px' }}
+                      iconSize={isMobile ? 10 : 14}
+                    />
                     {locationFilter === 'all' ? (
                       <>
                         <Line
@@ -468,10 +630,29 @@ const Home = () => {
                 ) : (
                   <BarChart data={getChartData() as never}>
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
-                    <XAxis dataKey="date" stroke={colors.axis} />
-                    <YAxis stroke={colors.axis} />
-                    <Tooltip contentStyle={{ backgroundColor: isDarkMode ? '#1e293b' : '#ffffff', border: `1px solid ${colors.grid}` }} />
-                    <Legend />
+                    <XAxis
+                      dataKey="date"
+                      stroke={colors.axis}
+                      angle={isMobile ? -45 : 0}
+                      textAnchor={isMobile ? "end" : "middle"}
+                      height={isMobile ? 60 : 30}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                    />
+                    <YAxis
+                      stroke={colors.axis}
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
+                        border: `1px solid ${colors.grid}`,
+                        fontSize: isMobile ? '12px' : '14px'
+                      }}
+                    />
+                    <Legend
+                      wrapperStyle={{ fontSize: isMobile ? '11px' : '14px' }}
+                      iconSize={isMobile ? 10 : 14}
+                    />
                     {locationFilter === 'all' ? (
                       <>
                         <Bar dataKey="MC Main Total" fill={colors.mcMain} />
@@ -492,6 +673,84 @@ const Home = () => {
           ) : (
             <div className="no-data">
               <p>No attendance records found. Submit your first record!</p>
+            </div>
+          )}
+
+          {/* Weekly Summary Section */}
+          {records.length > 0 && (
+            <div className="weekly-summary-section">
+              <h2>Weekly Summary</h2>
+              <div className="summary-controls">
+                <div className="form-group">
+                  <label htmlFor="week-select">Select Week</label>
+                  <select
+                    id="week-select"
+                    value={selectedWeek}
+                    onChange={(e) => setSelectedWeek(e.target.value)}
+                    className="week-select"
+                  >
+                    {availableWeeks.map(week => {
+                      const date = new Date(week + 'T00:00:00');
+                      const formatted = date.toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        month: 'long',
+                        day: 'numeric',
+                        year: 'numeric'
+                      });
+                      return (
+                        <option key={week} value={week}>
+                          {formatted}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label htmlFor="summary-location">Location</label>
+                  <select
+                    id="summary-location"
+                    value={summaryLocation}
+                    onChange={(e) => setSummaryLocation(e.target.value as LocationFilter)}
+                    className="location-select"
+                  >
+                    <option value="all">All Locations</option>
+                    <option value="mission-college">Mission College</option>
+                    <option value="silicon-valley-university">Silicon Valley University</option>
+                  </select>
+                </div>
+
+                <button
+                  onClick={copyToClipboard}
+                  className="copy-button"
+                  disabled={!weeklySummary}
+                >
+                  📋 Copy Summary
+                </button>
+              </div>
+
+              {weeklySummary ? (
+                <div className="summary-display">
+                  <div className="summary-stats">
+                    <div className="summary-stat">
+                      <span className="summary-label">Total Adults:</span>
+                      <span className="summary-value">{weeklySummary.totalAdults}</span>
+                    </div>
+                    <div className="summary-stat">
+                      <span className="summary-label">Total Kids:</span>
+                      <span className="summary-value">{weeklySummary.totalKids}</span>
+                    </div>
+                    <div className="summary-stat">
+                      <span className="summary-label">Total Combined:</span>
+                      <span className="summary-value">{weeklySummary.totalCombined}</span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="no-data">
+                  <p>No data available for the selected week and location.</p>
+                </div>
+              )}
             </div>
           )}
 

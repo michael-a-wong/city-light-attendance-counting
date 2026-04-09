@@ -14,6 +14,7 @@ type Theme = 'light' | 'dark';
 
 function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => void }) {
   const location = useLocation();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleSubmitAttendanceClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     // If already on submit page, trigger form submission instead of navigating
@@ -24,7 +25,25 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
         form.requestSubmit();
       }
     }
+    // Close menu on mobile after navigation
+    setIsMenuOpen(false);
   };
+
+  const handleLinkClick = () => {
+    setIsMenuOpen(false);
+  };
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
 
   return (
     <nav className="nav">
@@ -33,7 +52,21 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
           <img src="/city-light-logo.png" alt="City Light Bible Church" className="nav-logo" />
           <h1 className="nav-title">City Light Weekly Attendance</h1>
         </div>
-        <div className="nav-links">
+
+        {/* Hamburger button - mobile only */}
+        <button
+          className={`hamburger ${isMenuOpen ? 'open' : ''}`}
+          onClick={() => setIsMenuOpen(!isMenuOpen)}
+          aria-label="Toggle menu"
+          aria-expanded={isMenuOpen}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        {/* Desktop navigation */}
+        <div className="nav-links desktop-nav">
           <Link
             to="/"
             className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}
@@ -41,17 +74,17 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
             Dashboard
           </Link>
           <Link
+            to="/communion"
+            className={`nav-link ${location.pathname === '/communion' ? 'active' : ''}`}
+          >
+            Communion
+          </Link>
+          <Link
             to="/submit"
             onClick={handleSubmitAttendanceClick}
             className={`nav-link ${location.pathname === '/submit' ? 'active' : ''}`}
           >
             Submit Attendance
-          </Link>
-          <Link
-            to="/communion"
-            className={`nav-link ${location.pathname === '/communion' ? 'active' : ''}`}
-          >
-            Communion
           </Link>
           <div className="theme-toggle-container">
             <span className="theme-label">Dark Mode</span>
@@ -69,6 +102,54 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
           </div>
         </div>
       </div>
+
+      {/* Mobile menu overlay */}
+      {isMenuOpen && (
+        <div className="menu-overlay" onClick={() => setIsMenuOpen(false)}>
+          <div className="mobile-menu" onClick={(e) => e.stopPropagation()}>
+            <div className="mobile-menu-header">
+              <h2>Menu</h2>
+            </div>
+            <div className="mobile-menu-links">
+              <Link
+                to="/"
+                onClick={handleLinkClick}
+                className={`mobile-nav-link ${location.pathname === '/' ? 'active' : ''}`}
+              >
+                Dashboard
+              </Link>
+              <Link
+                to="/communion"
+                onClick={handleLinkClick}
+                className={`mobile-nav-link ${location.pathname === '/communion' ? 'active' : ''}`}
+              >
+                Communion
+              </Link>
+              <Link
+                to="/submit"
+                onClick={handleSubmitAttendanceClick}
+                className={`mobile-nav-link ${location.pathname === '/submit' ? 'active' : ''}`}
+              >
+                Submit Attendance
+              </Link>
+              <div className="mobile-theme-toggle">
+                <span className="theme-label">Dark Mode</span>
+                <button
+                  onClick={toggleTheme}
+                  className="theme-toggle"
+                  aria-label="Toggle dark mode"
+                  role="switch"
+                  aria-checked={theme === 'dark'}
+                >
+                  <span className="toggle-track">
+                    <span className="toggle-thumb"></span>
+                  </span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

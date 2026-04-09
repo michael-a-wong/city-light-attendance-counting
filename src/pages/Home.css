@@ -318,6 +318,128 @@
   font-size: 1.125rem;
 }
 
+/* Weekly Summary Section */
+.weekly-summary-section {
+  background: var(--bg);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  margin-bottom: 2rem;
+}
+
+.weekly-summary-section h2 {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: var(--text-h);
+}
+
+.summary-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+  align-items: center;
+}
+
+.summary-controls .form-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.summary-controls label {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+.week-select,
+.summary-controls .location-select {
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 1rem;
+  background: var(--background);
+  color: var(--text);
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.week-select:focus,
+.summary-controls .location-select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.copy-button {
+  padding: 0.75rem 1.5rem;
+  background: var(--accent);
+  color: #ffffff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+  height: fit-content;
+}
+
+.copy-button:hover:not(:disabled) {
+  background: #0056b3;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.copy-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.summary-display {
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  overflow-x: auto;
+}
+
+.summary-text {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  color: var(--text);
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  user-select: all;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summary-label {
+  font-size: 0.9rem;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.summary-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
 .recent-records {
   background: var(--bg);
   padding: 2rem;
@@ -341,6 +463,7 @@
 .table-container {
   overflow-x: auto;
   border-radius: 8px;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
 }
 
 table {
@@ -429,7 +552,8 @@ tbody tr:last-child td {
 
   .chart-toggle button {
     flex: 1;
-    padding: 0.75rem 0.5rem;
+    padding: 0.875rem 0.5rem;
+    min-height: 44px; /* Minimum touch target */
   }
 
   .stats-grid {
@@ -439,6 +563,10 @@ tbody tr:last-child td {
 
   .stat-card {
     padding: 1rem;
+  }
+
+  .stat-card:nth-child(3) {
+    grid-column: 1 / -1;
   }
 
   .stat-card h3 {
@@ -459,6 +587,47 @@ tbody tr:last-child td {
     margin-bottom: 1rem;
   }
 
+  .weekly-summary-section {
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .weekly-summary-section h2 {
+    font-size: 1.25rem;
+    margin-bottom: 1rem;
+  }
+
+  .summary-controls {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .copy-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .summary-display {
+    padding: 1rem;
+  }
+
+  .summary-text {
+    font-size: 0.85rem;
+  }
+
+  .summary-stats {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .summary-value {
+    font-size: 1.5rem;
+  }
+
+  .summary-label {
+    font-size: 0.85rem;
+  }
+
   .recent-records {
     padding: 1rem;
   }
@@ -474,11 +643,15 @@ tbody tr:last-child td {
 
   th,
   td {
-    padding: 0.625rem 0.375rem;
+    padding: 0.75rem 0.5rem;
   }
 
   th {
     font-size: 0.75rem;
+  }
+
+  tbody tr {
+    min-height: 44px; /* Minimum touch target */
   }
 
   .auth-section {
@@ -495,6 +668,7 @@ tbody tr:last-child td {
     width: 100%;
     padding: 1rem 1.5rem;
     text-align: center;
+    min-height: 44px; /* Minimum touch target */
   }
 
   .demo-banner {
@@ -598,13 +772,15 @@ tbody tr:last-child td {
   }
 
   .pagination-button {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.75rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+    min-height: 44px; /* Minimum touch target */
   }
 
   .pagination-page {
-    padding: 0.5rem;
-    font-size: 0.75rem;
-    min-width: 32px;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+    min-width: 44px; /* Minimum touch target */
+    min-height: 44px;
   }
 }
