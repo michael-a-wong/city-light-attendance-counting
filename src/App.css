@@ -30,6 +30,13 @@
   display: flex;
   align-items: center;
   gap: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.nav-branding:hover {
+  opacity: 0.8;
 }
 
 .nav-logo {

@@ -48,10 +48,10 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
   return (
     <nav className="nav">
       <div className="nav-container">
-        <div className="nav-branding">
+        <Link to="/" className="nav-branding" onClick={handleLinkClick}>
           <img src="/city-light-logo.png" alt="City Light Bible Church" className="nav-logo" />
           <h1 className="nav-title">City Light Weekly Attendance</h1>
-        </div>
+        </Link>
 
         {/* Hamburger button - mobile only */}
         <button
