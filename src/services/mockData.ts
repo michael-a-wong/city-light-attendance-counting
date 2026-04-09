@@ -57,6 +57,7 @@ const generateMockData = (): AttendanceRecord[] => {
         svuFamilyOverflow: 0,
         adjustment: Math.round(5 * totalFactor),
         kids: Math.round(40 * totalFactor),
+        notes: '',
         total: Math.round(215 * totalFactor),
         timestamp: `${dateStr}T10:00:00Z`,
       });
@@ -84,6 +85,7 @@ const generateMockData = (): AttendanceRecord[] => {
         svuFamilyOverflow: 0,
         adjustment: Math.round(3 * totalFactor),
         kids: Math.round(25 * totalFactor),
+        notes: '',
         total: Math.round(118 * totalFactor),
         timestamp: `${dateStr}T10:15:00Z`,
       });
@@ -111,6 +113,7 @@ const generateMockData = (): AttendanceRecord[] => {
         svuFamilyOverflow: Math.round(10 * totalFactor),
         adjustment: Math.round(3 * totalFactor),
         kids: Math.round(18 * totalFactor),
+        notes: '',
         total: Math.round(100 * totalFactor),
         timestamp: `${dateStr}T11:00:00Z`,
       });
@@ -138,6 +141,7 @@ const generateMockData = (): AttendanceRecord[] => {
         svuFamilyOverflow: Math.round(35 * totalFactor),
         adjustment: Math.round(7 * totalFactor),
         kids: Math.round(65 * totalFactor),
+        notes: '',
         total: Math.round(400 * totalFactor),
         timestamp: `${dateStr}T11:00:00Z`,
       });
@@ -166,6 +170,7 @@ const generateMockData = (): AttendanceRecord[] => {
         svuFamilyOverflow: 0,
         adjustment: Math.round(5 * totalFactor),
         kids: Math.round(40 * totalFactor),
+        notes: '',
         total: Math.round(215 * totalFactor),
         timestamp: `${dateStr}T10:00:00Z`,
       });
@@ -193,6 +198,7 @@ const generateMockData = (): AttendanceRecord[] => {
         svuFamilyOverflow: 0,
         adjustment: Math.round(4 * totalFactor),
         kids: Math.round(30 * totalFactor),
+        notes: '',
         total: Math.round(169 * totalFactor),
         timestamp: `${dateStr}T10:15:00Z`,
       });

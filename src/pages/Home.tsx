@@ -37,6 +37,7 @@ interface ChartDataPoint {
   'Combined Total'?: number;
   'Adult Total'?: number;
   'Kids'?: number;
+  [key: string]: string | number | undefined;
 }
 
 const formatLocationName = (location: string): string => {
@@ -162,11 +163,12 @@ const Home = () => {
 
         // Add to specific location
         const locationName = formatLocationName(record.location);
-        acc[dateKey][locationName] = (acc[dateKey][locationName] || 0) + record.total;
+        const currentValue = acc[dateKey][locationName];
+        acc[dateKey][locationName] = (typeof currentValue === 'number' ? currentValue : 0) + record.total;
 
         // Add to totals
-        acc[dateKey]['Total Adults'] += record.total;
-        acc[dateKey]['Total Kids'] += record.kids;
+        acc[dateKey]['Total Adults'] = (acc[dateKey]['Total Adults'] || 0) + record.total;
+        acc[dateKey]['Total Kids'] = (acc[dateKey]['Total Kids'] || 0) + record.kids;
 
         return acc;
       }, {} as Record<string, ChartDataPoint>);
@@ -181,9 +183,9 @@ const Home = () => {
           'MC Main': item['MC Main'] || 0,
           'MC Overflow': item['MC Overflow'] || 0,
           'SVU': item['SVU'] || 0,
-          'Total Adults': item['Total Adults'],
-          'Total Kids': item['Total Kids'],
-          'Combined Total': item['Total Adults'] + item['Total Kids'],
+          'Total Adults': item['Total Adults'] || 0,
+          'Total Kids': item['Total Kids'] || 0,
+          'Combined Total': (item['Total Adults'] || 0) + (item['Total Kids'] || 0),
         }));
     } else {
       // For specific location, show just that location's data
@@ -397,7 +399,7 @@ const Home = () => {
               <h2>Attendance Trends</h2>
               <ResponsiveContainer width="100%" height={400}>
                 {chartType === 'line' ? (
-                  <LineChart data={getChartData()}>
+                  <LineChart data={getChartData() as never}>
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                     <XAxis dataKey="date" stroke={colors.axis} />
                     <YAxis stroke={colors.axis} />
@@ -473,7 +475,7 @@ const Home = () => {
                     )}
                   </LineChart>
                 ) : (
-                  <BarChart data={getChartData()}>
+                  <BarChart data={getChartData() as never}>
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                     <XAxis dataKey="date" stroke={colors.axis} />
                     <YAxis stroke={colors.axis} />

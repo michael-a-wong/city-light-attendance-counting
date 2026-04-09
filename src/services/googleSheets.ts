@@ -67,7 +67,7 @@ export const initializeGIS = (): Promise<void> => {
  */
 export const getAuthToken = (): Promise<string> => {
   return new Promise((resolve, reject) => {
-    if (!gapiInited || !gisInited) {
+    if (!gapiInited || !gisInited || !tokenClient) {
       reject(new Error('Google API not initialized'));
       return;
     }
@@ -76,7 +76,8 @@ export const getAuthToken = (): Promise<string> => {
       if (resp.error !== undefined) {
         reject(resp);
       } else {
-        resolve(gapi.client.getToken().access_token);
+        const token = gapi.client.getToken();
+        resolve(token ? token.access_token : '');
       }
     };
 
@@ -108,24 +109,31 @@ export const fetchAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
   try {
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A2:Q', // Assuming headers in row 1
+      range: 'Sheet1!A2:W', // Assuming headers in row 1
     });
 
     const rows = response.result.values || [];
     return rows.map((row: string[]): AttendanceRecord => {
-      const farLeft = parseInt(row[2]) || 0;
-      const left = parseInt(row[3]) || 0;
-      const middleLeft = parseInt(row[4]) || 0;
-      const middleRight = parseInt(row[5]) || 0;
-      const right = parseInt(row[6]) || 0;
-      const farRight = parseInt(row[7]) || 0;
-      const back = parseInt(row[8]) || 0;
-      const momsRoom = parseInt(row[9]) || 0;
-      const overflow1 = parseInt(row[10]) || 0;
-      const overflow2 = parseInt(row[11]) || 0;
-      const familyRoom = parseInt(row[12]) || 0;
-      const adjustment = parseInt(row[13]) || 0;
-      const kids = parseInt(row[14]) || 0;
+      const location = (row[2] || 'mission-college-main') as AttendanceRecord['location'];
+      const farLeft = parseInt(row[3]) || 0;
+      const left = parseInt(row[4]) || 0;
+      const middleLeft = parseInt(row[5]) || 0;
+      const middleRight = parseInt(row[6]) || 0;
+      const right = parseInt(row[7]) || 0;
+      const farRight = parseInt(row[8]) || 0;
+      const back = parseInt(row[9]) || 0;
+      const momsRoom = parseInt(row[10]) || 0;
+      const familyRoom = parseInt(row[11]) || 0;
+      const overflow1 = parseInt(row[12]) || 0;
+      const overflow2 = parseInt(row[13]) || 0;
+      const leftWingLeftColumn = parseInt(row[14]) || 0;
+      const leftWingRightColumn = parseInt(row[15]) || 0;
+      const rightWingLeftColumn = parseInt(row[16]) || 0;
+      const rightWingRightColumn = parseInt(row[17]) || 0;
+      const svuFamilyOverflow = parseInt(row[18]) || 0;
+      const adjustment = parseInt(row[19]) || 0;
+      const kids = parseInt(row[20]) || 0;
+      const notes = row[21] || '';
 
       const total =
         farLeft +
@@ -136,14 +144,20 @@ export const fetchAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
         farRight +
         back +
         momsRoom +
+        familyRoom +
         overflow1 +
         overflow2 +
-        familyRoom +
+        leftWingLeftColumn +
+        leftWingRightColumn +
+        rightWingLeftColumn +
+        rightWingRightColumn +
+        svuFamilyOverflow +
         adjustment;
 
       return {
         name: row[0] || '',
         date: row[1] || '',
+        location,
         farLeft,
         left,
         middleLeft,
@@ -152,14 +166,19 @@ export const fetchAttendanceRecords = async (): Promise<AttendanceRecord[]> => {
         farRight,
         back,
         momsRoom,
+        familyRoom,
         overflow1,
         overflow2,
-        familyRoom,
+        leftWingLeftColumn,
+        leftWingRightColumn,
+        rightWingLeftColumn,
+        rightWingRightColumn,
+        svuFamilyOverflow,
         adjustment,
         kids,
-        notes: row[15] || '',
+        notes,
         total,
-        timestamp: row[16] || '',
+        timestamp: row[22] || '',
       };
     });
   } catch (error) {
@@ -179,6 +198,7 @@ export const submitAttendanceRecord = async (
       [
         record.name,
         record.date,
+        record.location,
         record.farLeft,
         record.left,
         record.middleLeft,
@@ -187,9 +207,14 @@ export const submitAttendanceRecord = async (
         record.farRight,
         record.back,
         record.momsRoom,
+        record.familyRoom,
         record.overflow1,
         record.overflow2,
-        record.familyRoom,
+        record.leftWingLeftColumn,
+        record.leftWingRightColumn,
+        record.rightWingLeftColumn,
+        record.rightWingRightColumn,
+        record.svuFamilyOverflow,
         record.adjustment,
         record.kids,
         record.notes,
@@ -199,7 +224,7 @@ export const submitAttendanceRecord = async (
 
     await gapi.client.sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A:Q',
+      range: 'Sheet1!A:W',
       valueInputOption: 'USER_ENTERED',
       resource: { values },
     });
@@ -221,7 +246,7 @@ export const updateAttendanceRecord = async (
     // First, fetch all records to find the row number
     const response = await gapi.client.sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
-      range: 'Sheet1!A2:Q', // Assuming headers in row 1
+      range: 'Sheet1!A2:W', // Assuming headers in row 1
     });
 
     const rows = response.result.values || [];
@@ -252,19 +277,24 @@ export const updateAttendanceRecord = async (
         record.farRight,
         record.back,
         record.momsRoom,
+        record.familyRoom,
         record.overflow1,
         record.overflow2,
-        record.familyRoom,
+        record.leftWingLeftColumn,
+        record.leftWingRightColumn,
+        record.rightWingLeftColumn,
+        record.rightWingRightColumn,
+        record.svuFamilyOverflow,
         record.adjustment,
         record.kids,
         record.notes,
-        rows[rowIndex][16] || new Date().toISOString(), // Preserve original timestamp
+        rows[rowIndex][22] || new Date().toISOString(), // Preserve original timestamp
       ],
     ];
 
     await gapi.client.sheets.spreadsheets.values.update({
       spreadsheetId: SPREADSHEET_ID,
-      range: `Sheet1!A${sheetRowNumber}:Q${sheetRowNumber}`,
+      range: `Sheet1!A${sheetRowNumber}:W${sheetRowNumber}`,
       valueInputOption: 'USER_ENTERED',
       resource: { values },
     });
