@@ -1,4 +1,4 @@
-import { AttendanceRecord } from '../types/attendance';
+import { AttendanceRecord } from '../types/attendance-types';
 
 // Google Sheets API configuration
 const SCOPES = 'https://www.googleapis.com/auth/spreadsheets';
@@ -207,6 +207,71 @@ export const submitAttendanceRecord = async (
     console.log('Attendance record submitted successfully');
   } catch (error) {
     console.error('Error submitting attendance record:', error);
+    throw error;
+  }
+};
+/**
+ * Update an existing attendance record in Google Sheets
+ * Finds record by date, name, and location (the unique key)
+ */
+export const updateAttendanceRecord = async (
+  record: AttendanceRecord
+): Promise<void> => {
+  try {
+    // First, fetch all records to find the row number
+    const response = await gapi.client.sheets.spreadsheets.values.get({
+      spreadsheetId: SPREADSHEET_ID,
+      range: 'Sheet1!A2:Q', // Assuming headers in row 1
+    });
+
+    const rows = response.result.values || [];
+    
+    // Find the row index (0-based in rows array, but add 2 for sheet row number because headers are row 1)
+    const rowIndex = rows.findIndex((row: any[]) => 
+      row[1] === record.date && row[0] === record.name && row[2] === record.location
+    );
+
+    if (rowIndex === -1) {
+      throw new Error('Record not found');
+    }
+
+    // Calculate the actual row number in the sheet (add 2: 1 for header, 1 for 0-based index)
+    const sheetRowNumber = rowIndex + 2;
+
+    // Update the specific row
+    const values = [
+      [
+        record.name,
+        record.date,
+        record.location,
+        record.farLeft,
+        record.left,
+        record.middleLeft,
+        record.middleRight,
+        record.right,
+        record.farRight,
+        record.back,
+        record.momsRoom,
+        record.overflow1,
+        record.overflow2,
+        record.familyRoom,
+        record.adjustment,
+        record.kids,
+        record.notes,
+        rows[rowIndex][16] || new Date().toISOString(), // Preserve original timestamp
+      ],
+    ];
+
+    await gapi.client.sheets.spreadsheets.values.update({
+      spreadsheetId: SPREADSHEET_ID,
+      range: `Sheet1!A${sheetRowNumber}:Q${sheetRowNumber}`,
+      valueInputOption: 'USER_ENTERED',
+      resource: { values },
+    });
+
+    console.log('Attendance record updated successfully');
+  } catch (error) {
+    console.error('Error updating attendance record:', error);
     throw error;
   }
 };

@@ -1,20 +1,20 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { submitAttendanceRecord, getAuthToken } from '../services/googleSheets';
-import { submitMockAttendanceRecord } from '../services/mockData';
+import { useNavigate, useParams } from 'react-router-dom';
+import { updateAttendanceRecord, getAuthToken } from '../services/googleSheets';
+import { updateMockAttendanceRecord, fetchMockAttendanceRecords } from '../services/mockData';
 import { AttendanceFormData, AttendanceRecord, LocationType } from '../types/attendance-types';
 import { sanitizeInput } from '../utils/sanitization';
 import './SubmitAttendance.css';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true';
 
-const SubmitAttendance = () => {
+const EditAttendance = () => {
   const navigate = useNavigate();
+  const { location, date } = useParams<{ location: string; date: string }>();
   const [formData, setFormData] = useState<AttendanceFormData>({
     name: '',
-    date: new Date().toISOString().split('T')[0],
+    date: '',
     location: 'mission-college-main',
-    // Mission College Main Room fields
     farLeft: '',
     left: '',
     middleLeft: '',
@@ -24,16 +24,13 @@ const SubmitAttendance = () => {
     back: '',
     momsRoom: '',
     familyRoom: '',
-    // Mission College Overflow Room fields
     overflow1: '',
     overflow2: '',
-    // Silicon Valley University fields
     leftWingLeftColumn: '',
     leftWingRightColumn: '',
     rightWingLeftColumn: '',
     rightWingRightColumn: '',
     svuFamilyOverflow: '',
-    // Common fields
     adjustment: '',
     kids: '',
     notes: '',
@@ -42,6 +39,70 @@ const SubmitAttendance = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(DEMO_MODE);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitMessage, setSubmitMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadRecord = async () => {
+      if (!date || !location) {
+        setSubmitMessage('Invalid record identifier');
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        let records: AttendanceRecord[];
+        if (DEMO_MODE) {
+          records = await fetchMockAttendanceRecords();
+        } else {
+          // TODO: Implement fetching from Google Sheets
+          records = [];
+        }
+
+        const decodedDate = decodeURIComponent(date);
+        const decodedLocation = decodeURIComponent(location) as LocationType;
+
+        const record = records.find(
+          (r) => r.date === decodedDate && r.location === decodedLocation
+        );
+
+        if (record) {
+          setFormData({
+            name: record.name,
+            date: record.date,
+            location: record.location,
+            farLeft: record.farLeft.toString(),
+            left: record.left.toString(),
+            middleLeft: record.middleLeft.toString(),
+            middleRight: record.middleRight.toString(),
+            right: record.right.toString(),
+            farRight: record.farRight.toString(),
+            back: record.back.toString(),
+            momsRoom: record.momsRoom.toString(),
+            familyRoom: record.familyRoom.toString(),
+            overflow1: record.overflow1.toString(),
+            overflow2: record.overflow2.toString(),
+            leftWingLeftColumn: record.leftWingLeftColumn.toString(),
+            leftWingRightColumn: record.leftWingRightColumn.toString(),
+            rightWingLeftColumn: record.rightWingLeftColumn.toString(),
+            rightWingRightColumn: record.rightWingRightColumn.toString(),
+            svuFamilyOverflow: record.svuFamilyOverflow.toString(),
+            adjustment: record.adjustment.toString(),
+            kids: record.kids.toString(),
+            notes: record.notes || '',
+          });
+        } else {
+          setSubmitMessage('Record not found');
+        }
+      } catch (error) {
+        console.error('Error loading record:', error);
+        setSubmitMessage('Error loading record');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadRecord();
+  }, [date, location]);
 
   const calculateTotal = (): number => {
     const { location, adjustment } = formData;
@@ -71,9 +132,7 @@ const SubmitAttendance = () => {
         (parseInt(formData.svuFamilyOverflow) || 0);
     }
 
-    // Add adjustment (common to all locations)
     total += parseInt(adjustment) || 0;
-
     return total;
   };
 
@@ -89,13 +148,8 @@ const SubmitAttendance = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    // Sanitize the notes field to prevent code injection
     const sanitizedValue = name === 'notes' ? sanitizeInput(value) : value;
     setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
-  };
-
-  const handleLocationChange = (location: LocationType) => {
-    setFormData((prev) => ({ ...prev, location }));
   };
 
   const handleAuth = async () => {
@@ -131,7 +185,6 @@ const SubmitAttendance = () => {
         name: formData.name,
         date: formData.date,
         location: formData.location,
-        // Mission College Main Room fields
         farLeft: parseInt(formData.farLeft) || 0,
         left: parseInt(formData.left) || 0,
         middleLeft: parseInt(formData.middleLeft) || 0,
@@ -141,37 +194,32 @@ const SubmitAttendance = () => {
         back: parseInt(formData.back) || 0,
         momsRoom: parseInt(formData.momsRoom) || 0,
         familyRoom: parseInt(formData.familyRoom) || 0,
-        // Mission College Overflow Room fields
         overflow1: parseInt(formData.overflow1) || 0,
         overflow2: parseInt(formData.overflow2) || 0,
-        // Silicon Valley University fields
         leftWingLeftColumn: parseInt(formData.leftWingLeftColumn) || 0,
         leftWingRightColumn: parseInt(formData.leftWingRightColumn) || 0,
         rightWingLeftColumn: parseInt(formData.rightWingLeftColumn) || 0,
         rightWingRightColumn: parseInt(formData.rightWingRightColumn) || 0,
         svuFamilyOverflow: parseInt(formData.svuFamilyOverflow) || 0,
-        // Common fields
         adjustment: parseInt(formData.adjustment) || 0,
         kids: parseInt(formData.kids) || 0,
-        notes: sanitizeInput(formData.notes), // Sanitize notes before submission
+        notes: sanitizeInput(formData.notes),
         total: calculateTotal(),
       };
 
       if (DEMO_MODE) {
-        await submitMockAttendanceRecord(record);
+        await updateMockAttendanceRecord(record);
       } else {
-        await submitAttendanceRecord(record);
+        await updateAttendanceRecord(record);
       }
 
-      setSubmitMessage('Attendance submitted successfully! Redirecting...');
-
-      // Redirect to dashboard after 1 second
+      setSubmitMessage('Attendance updated successfully! Redirecting...');
       setTimeout(() => {
         navigate('/');
       }, 1000);
     } catch (error) {
-      console.error('Submit error:', error);
-      setSubmitMessage('Error submitting attendance. Please try again.');
+      console.error('Update error:', error);
+      setSubmitMessage('Error updating attendance. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -179,87 +227,37 @@ const SubmitAttendance = () => {
 
   const total = calculateTotal();
 
+  if (isLoading) {
+    return (
+      <div className="submit-container">
+        <h1>Edit Attendance</h1>
+        <div className="info-section">
+          <p>Loading record...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="submit-container">
+      <h1>Edit Attendance Record</h1>
+
       <div className="info-section">
-        {formData.location === 'mission-college-main' && (
-          <>
-            <h3>Mission College Main Room - Instructions</h3>
-            <ul>
-              <li>All descriptors (far left, etc.) are when <strong>facing the stage</strong></li>
-              <li>Count <strong>adults only</strong> in each section - kids are counted separately below</li>
-              <li><strong>Back section:</strong> Tech team, purple chairs along the wall, and anyone outside</li>
-              <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
-              <li><strong>Kids:</strong> Total children in the room (we do NOT count children's ministry)</li>
-            </ul>
-            <p>
-              📄 View detailed instructions{' '}
-              <a
-                href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="instructions-link"
-              >
-                Here
-              </a>
-            </p>
-          </>
-        )}
-        {formData.location === 'mission-college-overflow' && (
-          <>
-            <h3>Mission College Overflow - Instructions</h3>
-            <ul>
-              <li><strong>Overflow 1:</strong> Gillmor Lecture Hall 103</li>
-              <li><strong>Overflow 2:</strong> Gillmor Lecture Hall 107</li>
-              <li><strong>Mom's Room:</strong> Gillmor Classroom 202</li>
-              <li><strong>Family Room:</strong> Gillmor Classroom 219</li>
-              <li>Count <strong>adults only</strong> in each room - kids are counted separately below</li>
-              <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
-              <li><strong>Kids:</strong> Total children in all overflow rooms (we do NOT count children's ministry)</li>
-            </ul>
-            <p>
-              📄 View detailed instructions{' '}
-              <a
-                href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="instructions-link"
-              >
-                Here
-              </a>
-            </p>
-          </>
-        )}
-        {formData.location === 'silicon-valley-university' && (
-          <>
-            <h3>Silicon Valley University - Instructions</h3>
-            <ul>
-              <li>Count each wing and column separately when <strong>facing the stage</strong></li>
-              <li><strong>Left Wing:</strong> Has left and right columns</li>
-              <li><strong>Right Wing:</strong> Has left and right columns</li>
-              <li>Count <strong>adults only</strong> in each section - kids are counted separately below</li>
-              <li><strong>Family/Overflow Room:</strong> Separate room for families with young children</li>
-              <li><strong>Adjustment:</strong> Rough estimate of people who entered after initial count</li>
-              <li><strong>Kids:</strong> Total children in the venue (we do NOT count children's ministry)</li>
-            </ul>
-            <p>
-              📄 View detailed instructions{' '}
-              <a
-                href="https://docs.google.com/document/d/1LivReU3QJvyr4AD1Q-rh0auIIYWgKFy0A41AF7ziqls/edit?usp=sharing"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="instructions-link"
-              >
-                Here
-              </a>
-            </p>
-          </>
-        )}
+        <p>
+          Update the attendance counts for <strong>{formData.date}</strong> at{' '}
+          <strong>
+            {formData.location === 'mission-college-main'
+              ? 'Mission College Main Room'
+              : formData.location === 'mission-college-overflow'
+              ? 'Mission College Overflow'
+              : 'Silicon Valley University'}
+          </strong>
+        </p>
       </div>
 
       {DEMO_MODE && (
         <div className="demo-banner">
-          <strong>Demo Mode:</strong> Submissions will be saved to mock data only (not Google Sheets).
+          <strong>Demo Mode:</strong> Changes will be saved to mock data only (not Google Sheets).
         </div>
       )}
 
@@ -270,7 +268,7 @@ const SubmitAttendance = () => {
       )}
 
       {submitMessage && (
-        <div className={`message ${submitMessage.includes('Error') || submitMessage.includes('failed') ? 'error' : 'success'}`}>
+        <div className={`message ${submitMessage.includes('Error') || submitMessage.includes('failed') || submitMessage.includes('not found') ? 'error' : 'success'}`}>
           {submitMessage}
         </div>
       )}
@@ -297,32 +295,9 @@ const SubmitAttendance = () => {
             value={formData.date}
             onChange={handleInputChange}
             required
+            disabled
           />
-        </div>
-
-        <h2>Select Location</h2>
-        <div className="location-tabs">
-          <button
-            type="button"
-            className={formData.location === 'mission-college-main' ? 'active' : ''}
-            onClick={() => handleLocationChange('mission-college-main')}
-          >
-            Mission College Main Room
-          </button>
-          <button
-            type="button"
-            className={formData.location === 'mission-college-overflow' ? 'active' : ''}
-            onClick={() => handleLocationChange('mission-college-overflow')}
-          >
-            Mission College Overflow
-          </button>
-          <button
-            type="button"
-            className={formData.location === 'silicon-valley-university' ? 'active' : ''}
-            onClick={() => handleLocationChange('silicon-valley-university')}
-          >
-            Silicon Valley University
-          </button>
+          <small style={{ color: 'var(--secondary)' }}>Date cannot be changed when editing</small>
         </div>
 
         <h2>Section Counts</h2>
@@ -422,6 +397,32 @@ const SubmitAttendance = () => {
             </div>
 
             <div className="form-group">
+              <label htmlFor="momsRoom">Mom's Room *</label>
+              <input
+                type="number"
+                id="momsRoom"
+                name="momsRoom"
+                value={formData.momsRoom}
+                onChange={handleInputChange}
+                min="0"
+                required
+              />
+              <small>Gillmor Classroom 202. Do not count if the door is closed.</small>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="familyRoom">Family Room: Gillmor Classroom 219 (Adults only)</label>
+              <input
+                type="number"
+                id="familyRoom"
+                name="familyRoom"
+                value={formData.familyRoom}
+                onChange={handleInputChange}
+                min="0"
+              />
+            </div>
+
+            <div className="form-group">
               <label htmlFor="adjustment">Adjustment *</label>
               <input
                 type="number"
@@ -470,32 +471,6 @@ const SubmitAttendance = () => {
                 id="overflow2"
                 name="overflow2"
                 value={formData.overflow2}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="momsRoom">Mom's Room: Gillmor Classroom 202 *</label>
-              <input
-                type="number"
-                id="momsRoom"
-                name="momsRoom"
-                value={formData.momsRoom}
-                onChange={handleInputChange}
-                min="0"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="familyRoom">Family Room: Gillmor Classroom 219 *</label>
-              <input
-                type="number"
-                id="familyRoom"
-                name="familyRoom"
-                value={formData.familyRoom}
                 onChange={handleInputChange}
                 min="0"
                 required
@@ -648,12 +623,17 @@ const SubmitAttendance = () => {
           </div>
         </div>
 
-        <button type="submit" disabled={isSubmitting || !isAuthenticated} className="submit-button">
-          {isSubmitting ? 'Submitting...' : 'Submit Attendance'}
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          <button type="button" onClick={() => navigate('/')} className="cancel-button">
+            Cancel
+          </button>
+          <button type="submit" disabled={isSubmitting || !isAuthenticated} className="submit-button">
+            {isSubmitting ? 'Updating...' : 'Update Attendance'}
+          </button>
+        </div>
       </form>
     </div>
   );
 };
 
-export default SubmitAttendance;
+export default EditAttendance;
