@@ -97,8 +97,8 @@ function App() {
   };
 
   const handleAuthSuccess = () => {
-    // Set cookie to expire in 30 days
-    Cookies.set('clbc-auth', 'true', { expires: 30 });
+    // Set cookie to expire in 6 months (180 days)
+    Cookies.set('clbc-auth', 'true', { expires: 180 });
     setIsAuthenticated(true);
   };
 
