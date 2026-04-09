@@ -5,6 +5,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import Home from './pages/Home';
 import SubmitAttendance from './pages/SubmitAttendance';
 import EditAttendance from './pages/EditAttendance';
+import Communion from './pages/Communion';
 import PasswordPrompt from './components/PasswordPrompt';
 import './App.css';
 
@@ -44,6 +45,12 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
             className={`nav-link ${location.pathname === '/submit' ? 'active' : ''}`}
           >
             Submit Attendance
+          </Link>
+          <Link
+            to="/communion"
+            className={`nav-link ${location.pathname === '/communion' ? 'active' : ''}`}
+          >
+            Communion
           </Link>
           <div className="theme-toggle-container">
             <span className="theme-label">Dark Mode</span>
@@ -128,6 +135,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/submit" element={<SubmitAttendance />} />
+            <Route path="/communion" element={<Communion />} />
             <Route path="/edit/:location/:date" element={<EditAttendance />} />
           </Routes>
         </main>
