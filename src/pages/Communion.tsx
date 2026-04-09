@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useAttendanceData } from '../contexts/AttendanceDataContext';
+import { getUniqueSortedDates, formatLongDate } from '../utils/dateHelpers';
+import { LOCATIONS } from '../utils/constants';
 import './Communion.css';
 
 const Communion = () => {
@@ -8,16 +10,15 @@ const Communion = () => {
   const [selectedLocation, setSelectedLocation] = useState<'mission-college' | 'silicon-valley-university'>('mission-college');
 
   // Get unique dates sorted newest first
-  const uniqueDates = [...new Set(records.map(r => r.date.split('T')[0]))]
-    .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+  const uniqueDates = getUniqueSortedDates(records.map(r => r.date));
 
   // Filter records by selected date
   const dateRecords = records.filter(r => r.date.split('T')[0] === selectedDate);
 
   // Find specific location records
-  const mainRecord = dateRecords.find(r => r.location === 'mission-college-main');
-  const overflowRecord = dateRecords.find(r => r.location === 'mission-college-overflow');
-  const svuRecord = dateRecords.find(r => r.location === 'silicon-valley-university');
+  const mainRecord = dateRecords.find(r => r.location === LOCATIONS.MISSION_COLLEGE_MAIN);
+  const overflowRecord = dateRecords.find(r => r.location === LOCATIONS.MISSION_COLLEGE_OVERFLOW);
+  const svuRecord = dateRecords.find(r => r.location === LOCATIONS.SILICON_VALLEY_UNIVERSITY);
 
   // Calculate totals
   const hasData = selectedLocation === 'mission-college'
@@ -39,16 +40,6 @@ const Communion = () => {
   const rightWingTotal = svuRecord
     ? svuRecord.rightWingLeftColumn + svuRecord.rightWingRightColumn
     : 0;
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
 
   if (isLoading) {
     return (
@@ -115,7 +106,7 @@ const Communion = () => {
             <option value="">-- Select a date --</option>
             {uniqueDates.map(date => (
               <option key={date} value={date}>
-                {formatDate(date)}
+                {formatLongDate(date)}
               </option>
             ))}
           </select>
@@ -139,7 +130,7 @@ const Communion = () => {
         <div className="communion-results">
           {!hasData && (
             <div className="warning-banner">
-              ⚠️ No data found for {selectedLocation === 'mission-college' ? 'Mission College' : 'Silicon Valley University'} on {formatDate(selectedDate)}
+              ⚠️ No data found for {selectedLocation === 'mission-college' ? 'Mission College' : 'Silicon Valley University'} on {formatLongDate(selectedDate)}
             </div>
           )}
 

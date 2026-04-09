@@ -13,11 +13,39 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import {
+  parseLocalDate,
+  formatShortDate,
+  formatLongDate,
+  formatMediumDate,
+  getUniqueSortedDates,
+} from '../utils/dateHelpers';
+import {
+  formatLocationName,
+  filterRecordsByLocation,
+  LocationFilter,
+} from '../utils/locationHelpers';
+import {
+  generateWeeklySummaryText,
+  copyToClipboard as copyTextToClipboard,
+} from '../utils/summaryHelpers';
+import {
+  getChartColors,
+  getChartHeight,
+  getXAxisConfig,
+  getYAxisConfig,
+  getTooltipConfig,
+  getLegendConfig,
+} from '../utils/chartHelpers';
+import {
+  MOBILE_BREAKPOINT,
+  RECORDS_PER_PAGE,
+  MAX_PAGINATION_PAGES,
+  RECENT_WEEKS_COUNT,
+} from '../utils/constants';
 import './Home.css';
 
 const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || !import.meta.env.VITE_APPS_SCRIPT_URL;
-
-type LocationFilter = 'all' | 'mission-college' | 'silicon-valley-university';
 
 interface ChartDataPoint {
   date: string;
@@ -30,25 +58,6 @@ interface ChartDataPoint {
   [key: string]: string | number | undefined;
 }
 
-const formatLocationName = (location: string): string => {
-  switch (location) {
-    case 'mission-college-main':
-      return 'MC Main';
-    case 'mission-college-overflow':
-      return 'MC Overflow';
-    case 'silicon-valley-university':
-      return 'SVU';
-    default:
-      return location;
-  }
-};
-
-// Parse date string as local date (not UTC) to avoid timezone issues
-const parseLocalDate = (dateString: string): Date => {
-  const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day); // month is 0-indexed
-};
-
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -57,8 +66,7 @@ const Home = () => {
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 10;
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
 
   // Weekly summary state
   const [selectedWeek, setSelectedWeek] = useState<string>('');
@@ -91,7 +99,7 @@ const Home = () => {
   // Detect mobile viewport
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
+      setIsMobile(window.innerWidth <= MOBILE_BREAKPOINT);
     };
 
     window.addEventListener('resize', handleResize);
@@ -110,11 +118,10 @@ const Home = () => {
 
   const getChartData = () => {
     // Get unique dates, sorted newest to oldest
-    const uniqueDates = [...new Set(sortedRecords.map(r => r.date))]
-      .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime());
+    const uniqueDates = getUniqueSortedDates(sortedRecords.map(r => r.date));
 
     // Take the last 10 dates
-    const last10Dates = uniqueDates.slice(0, 10).reverse(); // Reverse to show oldest to newest in chart
+    const last10Dates = uniqueDates.slice(0, RECENT_WEEKS_COUNT).reverse(); // Reverse to show oldest to newest in chart
 
     // Filter records to only those dates
     const recentRecords = sortedRecords.filter(record =>
@@ -154,10 +161,7 @@ const Home = () => {
       return Object.values(groupedByDate)
         .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
         .map((item) => ({
-          date: parseLocalDate(item.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-          }),
+          date: formatShortDate(item.date),
           'MC Main Total': item['MC Main Total'] || 0,
           'MC Overflow Total': item['MC Overflow Total'] || 0,
           'SVU Total': item['SVU Total'] || 0,
@@ -165,12 +169,7 @@ const Home = () => {
         }));
     } else {
       // For specific location, show just that location's data
-      const filteredRecords = recentRecords.filter(r => {
-        if (locationFilter === 'mission-college') {
-          return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
-        }
-        return r.location === locationFilter;
-      });
+      const filteredRecords = filterRecordsByLocation(recentRecords, locationFilter);
 
       const groupedByDate = filteredRecords.reduce((acc, record) => {
         const dateKey = record.date;
@@ -189,33 +188,12 @@ const Home = () => {
       return Object.values(groupedByDate)
         .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
         .map((item) => ({
-          date: parseLocalDate(item.date).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-          }),
+          date: formatShortDate(item.date),
           'Adult Total': item.adultTotal,
           Kids: item.kidsTotal,
           'Combined Total': item.adultTotal + item.kidsTotal,
         }));
     }
-  };
-
-  // Get chart colors from CSS variables
-  const getChartColors = () => {
-    const root = document.documentElement;
-    const style = getComputedStyle(root);
-    return {
-      mcMain: style.getPropertyValue('--chart-mc-main').trim(),
-      mcOverflow: style.getPropertyValue('--chart-mc-overflow').trim(),
-      svu: style.getPropertyValue('--chart-svu').trim(),
-      totalAdults: style.getPropertyValue('--chart-total-adults').trim(),
-      totalKids: style.getPropertyValue('--chart-total-kids').trim(),
-      combinedTotal: style.getPropertyValue('--chart-combined').trim(),
-      adultTotal: style.getPropertyValue('--chart-total-adults').trim(),
-      kids: style.getPropertyValue('--chart-total-kids').trim(),
-      grid: style.getPropertyValue('--chart-grid').trim(),
-      axis: style.getPropertyValue('--chart-axis').trim(),
-    };
   };
 
   const colors = getChartColors();
@@ -224,11 +202,10 @@ const Home = () => {
     if (records.length === 0) return null;
 
     // Get unique dates, sorted newest to oldest
-    const uniqueDates = [...new Set(records.map(r => r.date))]
-      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+    const uniqueDates = getUniqueSortedDates(records.map(r => r.date));
 
     // Take the last 10 dates
-    const last10Dates = uniqueDates.slice(0, 10);
+    const last10Dates = uniqueDates.slice(0, RECENT_WEEKS_COUNT);
 
     // Filter records to only those dates
     const recentRecords = records.filter(record =>
@@ -236,14 +213,7 @@ const Home = () => {
     );
 
     // Filter records by location if not 'all'
-    const filteredRecords = locationFilter === 'all'
-      ? recentRecords
-      : recentRecords.filter(r => {
-          if (locationFilter === 'mission-college') {
-            return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
-          }
-          return r.location === locationFilter;
-        });
+    const filteredRecords = filterRecordsByLocation(recentRecords, locationFilter);
 
     if (filteredRecords.length === 0) return null;
 
@@ -294,13 +264,7 @@ const Home = () => {
   const stats = getStats();
 
   // Get available weeks (Sundays) from records
-  const getAvailableWeeks = () => {
-    const sundays = [...new Set(sortedRecords.map(r => r.date.split('T')[0]))]
-      .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime());
-    return sundays;
-  };
-
-  const availableWeeks = getAvailableWeeks();
+  const availableWeeks = getUniqueSortedDates(sortedRecords.map(r => r.date));
 
   // Set initial week if not set
   useEffect(() => {
@@ -319,14 +283,7 @@ const Home = () => {
     });
 
     // Filter by location
-    const filteredWeekRecords = summaryLocation === 'all'
-      ? weekRecords
-      : weekRecords.filter(r => {
-          if (summaryLocation === 'mission-college') {
-            return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
-          }
-          return r.location === summaryLocation;
-        });
+    const filteredWeekRecords = filterRecordsByLocation(weekRecords, summaryLocation);
 
     if (filteredWeekRecords.length === 0) return null;
 
@@ -359,66 +316,22 @@ const Home = () => {
 
   const weeklySummary = getWeeklySummary();
 
-  // Generate copyable text
-  const generateSummaryText = () => {
-    if (!weeklySummary) return '';
-
-    const date = new Date(weeklySummary.date + 'T00:00:00');
-    const formattedDate = date.toLocaleDateString('en-US', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-
-    let text = `Weekly Attendance Summary - ${formattedDate}\n`;
-    text += `${'='.repeat(60)}\n\n`;
-
-    if (summaryLocation === 'all') {
-      text += `Total Adults: ${weeklySummary.totalAdults}\n`;
-      text += `Total Kids: ${weeklySummary.totalKids}\n`;
-      text += `Total Combined: ${weeklySummary.totalCombined}\n\n`;
-
-      text += `Breakdown by Location:\n`;
-      text += `${'-'.repeat(40)}\n`;
-      Object.entries(weeklySummary.locationBreakdown).forEach(([loc, data]) => {
-        const locationName = formatLocationName(loc);
-        text += `${locationName}:\n`;
-        text += `  Adults: ${data.adults}\n`;
-        text += `  Kids: ${data.kids}\n`;
-        text += `  Total: ${data.adults + data.kids}\n\n`;
-      });
-    } else {
-      const locationName = formatLocationName(summaryLocation);
-      text += `Location: ${locationName}\n\n`;
-      text += `Total Adults: ${weeklySummary.totalAdults}\n`;
-      text += `Total Kids: ${weeklySummary.totalKids}\n`;
-      text += `Total Combined: ${weeklySummary.totalCombined}\n`;
-    }
-
-    return text;
-  };
-
+  // Copy summary to clipboard
   const copyToClipboard = async () => {
-    const text = generateSummaryText();
-    try {
-      await navigator.clipboard.writeText(text);
+    if (!weeklySummary) return;
+
+    const text = generateWeeklySummaryText(weeklySummary, summaryLocation);
+    const success = await copyTextToClipboard(text);
+
+    if (success) {
       alert('Summary copied to clipboard!');
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    } else {
       alert('Failed to copy to clipboard');
     }
   };
 
   // Pagination calculations - filter by location first
-  const filteredRecordsForTable = locationFilter === 'all'
-    ? sortedRecords
-    : sortedRecords.filter(r => {
-        if (locationFilter === 'mission-college') {
-          return r.location === 'mission-college-main' || r.location === 'mission-college-overflow';
-        }
-        return r.location === locationFilter;
-      });
+  const filteredRecordsForTable = filterRecordsByLocation(sortedRecords, locationFilter);
 
   const sortedTableRecords = filteredRecordsForTable
     .slice()
@@ -428,9 +341,9 @@ const Home = () => {
       return (b.timestamp || '').localeCompare(a.timestamp || '');
     });
 
-  const totalPages = Math.ceil(sortedTableRecords.length / recordsPerPage);
-  const startIndex = (currentPage - 1) * recordsPerPage;
-  const endIndex = startIndex + recordsPerPage;
+  const totalPages = Math.ceil(sortedTableRecords.length / RECORDS_PER_PAGE);
+  const startIndex = (currentPage - 1) * RECORDS_PER_PAGE;
+  const endIndex = startIndex + RECORDS_PER_PAGE;
   const currentRecords = sortedTableRecords.slice(startIndex, endIndex);
 
   // Reset to page 1 when records change
@@ -442,23 +355,21 @@ const Home = () => {
     setCurrentPage(Math.max(1, Math.min(page, totalPages)));
   };
 
-  // Calculate which page numbers to show (max 10)
+  // Calculate which page numbers to show
   const getPageNumbers = () => {
-    const maxPagesToShow = 10;
-
-    if (totalPages <= maxPagesToShow) {
+    if (totalPages <= MAX_PAGINATION_PAGES) {
       // Show all pages if total is less than or equal to max
       return Array.from({ length: totalPages }, (_, i) => i + 1);
     }
 
     // Calculate start and end of the range
-    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
-    let endPage = startPage + maxPagesToShow - 1;
+    let startPage = Math.max(1, currentPage - Math.floor(MAX_PAGINATION_PAGES / 2));
+    let endPage = startPage + MAX_PAGINATION_PAGES - 1;
 
     // Adjust if we're near the end
     if (endPage > totalPages) {
       endPage = totalPages;
-      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+      startPage = Math.max(1, endPage - MAX_PAGINATION_PAGES + 1);
     }
 
     return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
@@ -543,33 +454,22 @@ const Home = () => {
           ) : records.length > 0 ? (
             <div className="chart-container">
               <h2>Recent Attendance Trends</h2>
-              <ResponsiveContainer width="100%" height={isMobile ? 300 : 400}>
+              <ResponsiveContainer width="100%" height={getChartHeight(isMobile)}>
                 {chartType === 'line' ? (
                   <LineChart data={getChartData() as never}>
                     <CartesianGrid strokeDasharray="3 3" stroke={colors.grid} />
                     <XAxis
                       dataKey="date"
                       stroke={colors.axis}
-                      angle={isMobile ? -45 : 0}
-                      textAnchor={isMobile ? "end" : "middle"}
-                      height={isMobile ? 60 : 30}
-                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      {...getXAxisConfig(isMobile)}
+                      tick={{ fontSize: getXAxisConfig(isMobile).fontSize }}
                     />
                     <YAxis
                       stroke={colors.axis}
-                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      tick={{ fontSize: getYAxisConfig(isMobile).fontSize }}
                     />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                        border: `1px solid ${colors.grid}`,
-                        fontSize: isMobile ? '12px' : '14px'
-                      }}
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: isMobile ? '11px' : '14px' }}
-                      iconSize={isMobile ? 10 : 14}
-                    />
+                    <Tooltip {...getTooltipConfig(isMobile, isDarkMode, colors.grid)} />
+                    <Legend {...getLegendConfig(isMobile)} />
                     {locationFilter === 'all' ? (
                       <>
                         <Line
@@ -633,26 +533,15 @@ const Home = () => {
                     <XAxis
                       dataKey="date"
                       stroke={colors.axis}
-                      angle={isMobile ? -45 : 0}
-                      textAnchor={isMobile ? "end" : "middle"}
-                      height={isMobile ? 60 : 30}
-                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      {...getXAxisConfig(isMobile)}
+                      tick={{ fontSize: getXAxisConfig(isMobile).fontSize }}
                     />
                     <YAxis
                       stroke={colors.axis}
-                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      tick={{ fontSize: getYAxisConfig(isMobile).fontSize }}
                     />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: isDarkMode ? '#1e293b' : '#ffffff',
-                        border: `1px solid ${colors.grid}`,
-                        fontSize: isMobile ? '12px' : '14px'
-                      }}
-                    />
-                    <Legend
-                      wrapperStyle={{ fontSize: isMobile ? '11px' : '14px' }}
-                      iconSize={isMobile ? 10 : 14}
-                    />
+                    <Tooltip {...getTooltipConfig(isMobile, isDarkMode, colors.grid)} />
+                    <Legend {...getLegendConfig(isMobile)} />
                     {locationFilter === 'all' ? (
                       <>
                         <Bar dataKey="MC Main Total" fill={colors.mcMain} />
@@ -689,20 +578,11 @@ const Home = () => {
                     onChange={(e) => setSelectedWeek(e.target.value)}
                     className="week-select"
                   >
-                    {availableWeeks.map(week => {
-                      const date = new Date(week + 'T00:00:00');
-                      const formatted = date.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        month: 'long',
-                        day: 'numeric',
-                        year: 'numeric'
-                      });
-                      return (
-                        <option key={week} value={week}>
-                          {formatted}
-                        </option>
-                      );
-                    })}
+                    {availableWeeks.map(week => (
+                      <option key={week} value={week}>
+                        {formatLongDate(week)}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -784,13 +664,7 @@ const Home = () => {
                         className="clickable-row"
                         onClick={() => navigate(`/edit/${encodeURIComponent(record.location)}/${encodeURIComponent(record.date.split('T')[0])}`)}
                       >
-                        <td>
-                          {parseLocalDate(record.date).toLocaleDateString('en-US', {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </td>
+                        <td>{formatMediumDate(record.date)}</td>
                         <td>{formatLocationName(record.location)}</td>
                         <td>{record.total}</td>
                         <td>{record.kids}</td>
