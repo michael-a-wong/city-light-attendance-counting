@@ -53,6 +53,15 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
           <h1 className="nav-title">City Light Weekly Attendance</h1>
         </Link>
 
+        {/* Mobile submit button - always visible */}
+        <Link
+          to="/submit"
+          onClick={handleSubmitAttendanceClick}
+          className="mobile-submit-button"
+        >
+          Submit
+        </Link>
+
         {/* Hamburger button - mobile only */}
         <button
           className={`hamburger ${isMenuOpen ? 'open' : ''}`}
@@ -124,13 +133,6 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
                 className={`mobile-nav-link ${location.pathname === '/communion' ? 'active' : ''}`}
               >
                 Communion
-              </Link>
-              <Link
-                to="/submit"
-                onClick={handleSubmitAttendanceClick}
-                className={`mobile-nav-link ${location.pathname === '/submit' ? 'active' : ''}`}
-              >
-                Submit Attendance
               </Link>
               <div className="mobile-theme-toggle">
                 <span className="theme-label">Dark Mode</span>
