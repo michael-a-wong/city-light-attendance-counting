@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
+import Cookies from 'js-cookie';
 import Home from './pages/Home';
 import SubmitAttendance from './pages/SubmitAttendance';
 import EditAttendance from './pages/EditAttendance';
+import PasswordPrompt from './components/PasswordPrompt';
 import './App.css';
 
 type Theme = 'light' | 'dark';
@@ -51,6 +53,11 @@ function Navigation({ theme, toggleTheme }: { theme: Theme; toggleTheme: () => v
 }
 
 function App() {
+  // Check for authentication cookie
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    return Cookies.get('clbc-auth') === 'true';
+  });
+
   // Detect system preference
   const getSystemTheme = (): Theme => {
     if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
@@ -88,6 +95,17 @@ function App() {
   const toggleTheme = () => {
     setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
   };
+
+  const handleAuthSuccess = () => {
+    // Set cookie to expire in 30 days
+    Cookies.set('clbc-auth', 'true', { expires: 30 });
+    setIsAuthenticated(true);
+  };
+
+  // Show password prompt if not authenticated
+  if (!isAuthenticated) {
+    return <PasswordPrompt onSuccess={handleAuthSuccess} />;
+  }
 
   return (
     <Router>
