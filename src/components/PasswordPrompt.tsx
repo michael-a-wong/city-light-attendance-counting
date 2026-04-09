@@ -12,7 +12,7 @@ const PasswordPrompt = ({ onSuccess }: PasswordPromptProps) => {
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
 
-    if (password === 'clbc-admin-team') {
+    if (password === 'adminteam') {
       onSuccess();
     } else {
       setError('Incorrect password. Please try again.');
