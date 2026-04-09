@@ -94,7 +94,32 @@ const SubmitAttendance = () => {
   };
 
   const handleLocationChange = (location: LocationType) => {
-    setFormData((prev) => ({ ...prev, location }));
+    // Reset all section-specific fields when changing location
+    setFormData((prev) => ({
+      name: prev.name,
+      date: prev.date,
+      location: location,
+      // Reset all section fields to empty
+      farLeft: '',
+      left: '',
+      middleLeft: '',
+      middleRight: '',
+      right: '',
+      farRight: '',
+      back: '',
+      momsRoom: '',
+      familyRoom: '',
+      overflow1: '',
+      overflow2: '',
+      leftWingLeftColumn: '',
+      leftWingRightColumn: '',
+      rightWingLeftColumn: '',
+      rightWingRightColumn: '',
+      svuFamilyOverflow: '',
+      adjustment: '',
+      kids: '',
+      notes: prev.notes,
+    }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

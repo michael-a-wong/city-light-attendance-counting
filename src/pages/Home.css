@@ -525,3 +525,86 @@ tbody tr:last-child td {
   justify-content: center;
   min-height: 200px;
 }
+
+/* Pagination */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
+  padding: 1rem 0;
+}
+
+.pagination-button {
+  background: var(--bg);
+  color: var(--text-h);
+  padding: 0.5rem 1rem;
+  border: 2px solid var(--border);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background: var(--hover-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pagination-button:disabled {
+  background: var(--bg);
+  color: var(--secondary);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pagination-pages {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.pagination-page {
+  background: var(--bg);
+  color: var(--text-h);
+  padding: 0.5rem 0.75rem;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 36px;
+}
+
+.pagination-page:hover {
+  background: var(--hover-bg);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.pagination-page.active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+@media (max-width: 768px) {
+  .pagination {
+    gap: 0.25rem;
+    padding: 0.75rem 0;
+  }
+
+  .pagination-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+  }
+
+  .pagination-page {
+    padding: 0.5rem;
+    font-size: 0.75rem;
+    min-width: 32px;
+  }
+}

@@ -25,11 +25,9 @@ type LocationFilter = 'all' | 'mission-college-main' | 'mission-college-overflow
 
 interface ChartDataPoint {
   date: string;
-  'MC Main'?: number;
-  'MC Overflow'?: number;
-  'SVU'?: number;
-  'Total Adults'?: number;
-  'Total Kids'?: number;
+  'MC Main Total'?: number;
+  'MC Overflow Total'?: number;
+  'SVU Total'?: number;
   'Combined Total'?: number;
   'Adult Total'?: number;
   'Kids'?: number;
@@ -49,6 +47,12 @@ const formatLocationName = (location: string): string => {
   }
 };
 
+// Parse date string as local date (not UTC) to avoid timezone issues
+const parseLocalDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split('-').map(Number);
+  return new Date(year, month - 1, day); // month is 0-indexed
+};
+
 const Home = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,6 +62,8 @@ const Home = () => {
   const [chartType, setChartType] = useState<'line' | 'bar'>('line');
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 10;
 
   // Detect theme changes
   useEffect(() => {
@@ -103,7 +109,7 @@ const Home = () => {
         : await fetchAttendanceRecords(ATTENDANCE_PASSWORD);
 
       // Sort by date
-      data.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+      data.sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime());
       setRecords(data);
     } catch (error) {
       console.error('Error loading records:', error);
@@ -114,55 +120,62 @@ const Home = () => {
   };
 
   const getChartData = () => {
-    // Filter to last 10 weeks
-    const tenWeeksAgo = new Date();
-    tenWeeksAgo.setDate(tenWeeksAgo.getDate() - (10 * 7));
+    // Get unique dates, sorted newest to oldest
+    const uniqueDates = [...new Set(records.map(r => r.date))]
+      .sort((a, b) => parseLocalDate(b).getTime() - parseLocalDate(a).getTime());
 
-    const recentRecords = records.filter(record => {
-      const recordDate = new Date(record.date);
-      return recordDate >= tenWeeksAgo;
-    });
+    // Take the last 10 dates
+    const last10Dates = uniqueDates.slice(0, 10).reverse(); // Reverse to show oldest to newest in chart
+
+    // Filter records to only those dates
+    const recentRecords = records.filter(record =>
+      last10Dates.includes(record.date)
+    );
 
     if (locationFilter === 'all') {
-      // For "All Locations", show individual location lines + total line
+      // For "All Locations", show individual location lines + combined total
       const groupedByDate = recentRecords.reduce((acc, record) => {
         const dateKey = record.date;
         if (!acc[dateKey]) {
           acc[dateKey] = {
             date: dateKey,
-            'MC Main': 0,
-            'MC Overflow': 0,
-            'SVU': 0,
-            'Total Adults': 0,
-            'Total Kids': 0,
+            'MC Main Total': 0,
+            'MC Overflow Total': 0,
+            'SVU Total': 0,
+            'Combined Total': 0,
           };
         }
 
-        // Add to specific location
-        const locationName = formatLocationName(record.location);
-        const currentValue = acc[dateKey][locationName];
-        acc[dateKey][locationName] = (typeof currentValue === 'number' ? currentValue : 0) + record.total;
+        // Add to specific location (adults + kids)
+        let locationKey: 'MC Main Total' | 'MC Overflow Total' | 'SVU Total';
+        if (record.location === 'mission-college-main') {
+          locationKey = 'MC Main Total';
+        } else if (record.location === 'mission-college-overflow') {
+          locationKey = 'MC Overflow Total';
+        } else {
+          locationKey = 'SVU Total';
+        }
 
-        // Add to totals
-        acc[dateKey]['Total Adults'] = (acc[dateKey]['Total Adults'] || 0) + record.total;
-        acc[dateKey]['Total Kids'] = (acc[dateKey]['Total Kids'] || 0) + record.kids;
+        const locationTotal = record.total + record.kids;
+        acc[dateKey][locationKey] = (acc[dateKey][locationKey] || 0) + locationTotal;
+
+        // Add to combined total
+        acc[dateKey]['Combined Total'] = (acc[dateKey]['Combined Total'] || 0) + locationTotal;
 
         return acc;
       }, {} as Record<string, ChartDataPoint>);
 
       return Object.values(groupedByDate)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
         .map((item) => ({
-          date: new Date(item.date).toLocaleDateString('en-US', {
+          date: parseLocalDate(item.date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
           }),
-          'MC Main': item['MC Main'] || 0,
-          'MC Overflow': item['MC Overflow'] || 0,
-          'SVU': item['SVU'] || 0,
-          'Total Adults': item['Total Adults'] || 0,
-          'Total Kids': item['Total Kids'] || 0,
-          'Combined Total': (item['Total Adults'] || 0) + (item['Total Kids'] || 0),
+          'MC Main Total': item['MC Main Total'] || 0,
+          'MC Overflow Total': item['MC Overflow Total'] || 0,
+          'SVU Total': item['SVU Total'] || 0,
+          'Combined Total': item['Combined Total'] || 0,
         }));
     } else {
       // For specific location, show just that location's data
@@ -183,9 +196,9 @@ const Home = () => {
       }, {} as Record<string, { date: string; adultTotal: number; kidsTotal: number }>);
 
       return Object.values(groupedByDate)
-        .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+        .sort((a, b) => parseLocalDate(a.date).getTime() - parseLocalDate(b.date).getTime())
         .map((item) => ({
-          date: new Date(item.date).toLocaleDateString('en-US', {
+          date: parseLocalDate(item.date).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
           }),
@@ -219,14 +232,17 @@ const Home = () => {
   const getStats = () => {
     if (records.length === 0) return null;
 
-    // Filter to last 10 weeks
-    const tenWeeksAgo = new Date();
-    tenWeeksAgo.setDate(tenWeeksAgo.getDate() - (10 * 7));
+    // Get unique dates, sorted newest to oldest
+    const uniqueDates = [...new Set(records.map(r => r.date))]
+      .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
 
-    const recentRecords = records.filter(record => {
-      const recordDate = new Date(record.date);
-      return recordDate >= tenWeeksAgo;
-    });
+    // Take the last 10 dates
+    const last10Dates = uniqueDates.slice(0, 10);
+
+    // Filter records to only those dates
+    const recentRecords = records.filter(record =>
+      last10Dates.includes(record.date)
+    );
 
     // Filter records by location if not 'all'
     const filteredRecords = locationFilter === 'all'
@@ -252,7 +268,7 @@ const Home = () => {
         acc[dateKey].combinedTotal += record.total + record.kids;
         return acc;
       }, {} as Record<string, { date: string; adultTotal: number; kidsTotal: number; combinedTotal: number }>)
-    ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Sort newest first
+    ).sort((a, b) => parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime()); // Sort newest first
 
     // Calculate Average Total
     const totalCombined = dailyTotals.reduce((sum, r) => sum + r.combinedTotal, 0);
@@ -280,6 +296,57 @@ const Home = () => {
   };
 
   const stats = getStats();
+
+  // Pagination calculations - filter by location first
+  const filteredRecordsForTable = locationFilter === 'all'
+    ? records
+    : records.filter(r => r.location === locationFilter);
+
+  const sortedRecords = filteredRecordsForTable
+    .slice()
+    .sort((a, b) => {
+      const dateCompare = parseLocalDate(b.date).getTime() - parseLocalDate(a.date).getTime();
+      if (dateCompare !== 0) return dateCompare;
+      return (b.timestamp || '').localeCompare(a.timestamp || '');
+    });
+
+  const totalPages = Math.ceil(sortedRecords.length / recordsPerPage);
+  const startIndex = (currentPage - 1) * recordsPerPage;
+  const endIndex = startIndex + recordsPerPage;
+  const currentRecords = sortedRecords.slice(startIndex, endIndex);
+
+  // Reset to page 1 when records change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [records.length]);
+
+  const goToPage = (page: number) => {
+    setCurrentPage(Math.max(1, Math.min(page, totalPages)));
+  };
+
+  // Calculate which page numbers to show (max 10)
+  const getPageNumbers = () => {
+    const maxPagesToShow = 10;
+
+    if (totalPages <= maxPagesToShow) {
+      // Show all pages if total is less than or equal to max
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+
+    // Calculate start and end of the range
+    let startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+    let endPage = startPage + maxPagesToShow - 1;
+
+    // Adjust if we're near the end
+    if (endPage > totalPages) {
+      endPage = totalPages;
+      startPage = Math.max(1, endPage - maxPagesToShow + 1);
+    }
+
+    return Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+  };
+
+  const pageNumbers = getPageNumbers();
 
   return (
     <div className="home-container">
@@ -358,7 +425,7 @@ const Home = () => {
             </div>
           ) : records.length > 0 ? (
             <div className="chart-container">
-              <h2>Attendance Trends</h2>
+              <h2>Recent Attendance Trends</h2>
               <ResponsiveContainer width="100%" height={400}>
                 {chartType === 'line' ? (
                   <LineChart data={getChartData() as never}>
@@ -371,44 +438,32 @@ const Home = () => {
                       <>
                         <Line
                           type="monotone"
-                          dataKey="MC Main"
+                          dataKey="MC Main Total"
                           stroke={colors.mcMain}
                           strokeWidth={2}
                           activeDot={{ r: 6 }}
                         />
                         <Line
                           type="monotone"
-                          dataKey="MC Overflow"
+                          dataKey="MC Overflow Total"
                           stroke={colors.mcOverflow}
                           strokeWidth={2}
                           activeDot={{ r: 6 }}
                         />
                         <Line
                           type="monotone"
-                          dataKey="SVU"
+                          dataKey="SVU Total"
                           stroke={colors.svu}
                           strokeWidth={2}
                           activeDot={{ r: 6 }}
                         />
                         <Line
                           type="monotone"
-                          dataKey="Total Adults"
-                          stroke={colors.totalAdults}
-                          strokeWidth={3}
-                          activeDot={{ r: 8 }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="Total Kids"
-                          stroke={colors.totalKids}
-                          strokeWidth={3}
-                        />
-                        <Line
-                          type="monotone"
                           dataKey="Combined Total"
                           stroke={colors.combinedTotal}
-                          strokeWidth={2}
+                          strokeWidth={3}
                           strokeDasharray="5 5"
+                          activeDot={{ r: 8 }}
                         />
                       </>
                     ) : (
@@ -445,11 +500,10 @@ const Home = () => {
                     <Legend />
                     {locationFilter === 'all' ? (
                       <>
-                        <Bar dataKey="MC Main" fill={colors.mcMain} />
-                        <Bar dataKey="MC Overflow" fill={colors.mcOverflow} />
-                        <Bar dataKey="SVU" fill={colors.svu} />
-                        <Bar dataKey="Total Adults" fill={colors.totalAdults} />
-                        <Bar dataKey="Total Kids" fill={colors.totalKids} />
+                        <Bar dataKey="MC Main Total" fill={colors.mcMain} />
+                        <Bar dataKey="MC Overflow Total" fill={colors.mcOverflow} />
+                        <Bar dataKey="SVU Total" fill={colors.svu} />
+                        <Bar dataKey="Combined Total" fill={colors.combinedTotal} />
                       </>
                     ) : (
                       <>
@@ -469,14 +523,14 @@ const Home = () => {
 
           {loading ? (
             <div className="recent-records">
-              <h2>Recent Attendance Records</h2>
+              <h2>Attendance Records</h2>
               <div className="loading-spinner" style={{ padding: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <div className="spinner"></div>
               </div>
             </div>
           ) : records.length > 0 ? (
             <div className="recent-records">
-              <h2>Recent Attendance Records</h2>
+              <h2>Attendance Records</h2>
               <p className="records-hint">Click on any record to edit</p>
               <div className="table-container">
                 <table>
@@ -491,41 +545,65 @@ const Home = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {records
-                      .slice()
-                      .sort((a, b) => {
-                        const dateCompare = new Date(b.date).getTime() - new Date(a.date).getTime();
-                        if (dateCompare !== 0) return dateCompare;
-                        return (b.timestamp || '').localeCompare(a.timestamp || '');
-                      })
-                      .slice(0, 15)
-                      .map((record, index) => (
-                        <tr
-                          key={`${record.date}-${record.location}-${index}`}
-                          className="clickable-row"
-                          onClick={() => navigate(`/edit/${encodeURIComponent(record.location)}/${encodeURIComponent(record.date.split('T')[0])}`)}
-                        >
-                          <td>
-                            {new Date(record.date).toLocaleDateString('en-US', {
-                              month: 'long',
-                              day: 'numeric',
-                              year: 'numeric',
-                            })}
-                          </td>
-                          <td>{formatLocationName(record.location)}</td>
-                          <td>{record.total}</td>
-                          <td>{record.kids}</td>
-                          <td>{record.total + record.kids}</td>
-                          <td>{record.name}</td>
-                        </tr>
-                      ))}
+                    {currentRecords.map((record, index) => (
+                      <tr
+                        key={`${record.date}-${record.location}-${index}`}
+                        className="clickable-row"
+                        onClick={() => navigate(`/edit/${encodeURIComponent(record.location)}/${encodeURIComponent(record.date.split('T')[0])}`)}
+                      >
+                        <td>
+                          {parseLocalDate(record.date).toLocaleDateString('en-US', {
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </td>
+                        <td>{formatLocationName(record.location)}</td>
+                        <td>{record.total}</td>
+                        <td>{record.kids}</td>
+                        <td>{record.total + record.kids}</td>
+                        <td>{record.name}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
+
+                {totalPages > 1 && (
+                  <div className="pagination">
+                    <button
+                      onClick={() => goToPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="pagination-button"
+                    >
+                      Previous
+                    </button>
+
+                    <div className="pagination-pages">
+                      {pageNumbers.map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => goToPage(page)}
+                          className={`pagination-page ${currentPage === page ? 'active' : ''}`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+
+                    <button
+                      onClick={() => goToPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="pagination-button"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           ) : (
             <div className="recent-records">
-              <h2>Recent Attendance Records</h2>
+              <h2>Attendance Records</h2>
               <div className="no-data">
                 <p>No attendance records found. Submit your first record!</p>
               </div>
